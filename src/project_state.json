@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 15,
+  "projectStateVersion": 17,
   "summary": "Build a simple restaurant inventory/order app with a form containing predefined ingredients grouped under Veg, Dairy, and Non-Veg (including \"wings\"), to record daily closing balance and next-day orders (with units) for a selected balance date, storing data persistently in-app (Google Drive/Sheets integration not supported), supporting non-mandatory inputs that default to 0 when left blank, and providing history records plus a one-tap copy-to-clipboard message format suitable for sending to a vendor via messaging.",
   "architectural_notes": [
     "Google Drive/Google Sheets integration is not supported; use in-app persistent storage instead."
@@ -258,6 +258,12 @@
       "summary": "Increase the font size of ingredient names to match header size and make ingredient text bold in the entry form.",
       "reqIds": [],
       "status": "pending"
+    },
+    {
+      "id": "AR-18",
+      "summary": "Attempt production deployment again so the latest build can go live.",
+      "reqIds": [],
+      "status": "in_progress"
     }
   ],
   "gameProjectType": "none",
