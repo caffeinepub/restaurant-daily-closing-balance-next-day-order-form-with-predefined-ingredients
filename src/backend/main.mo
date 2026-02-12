@@ -1,7 +1,7 @@
 import Map "mo:core/Map";
 import Principal "mo:core/Principal";
-import Iter "mo:core/Iter";
 import Text "mo:core/Text";
+import Iter "mo:core/Iter";
 
 actor {
   type CategoryName = Text;
@@ -107,5 +107,25 @@ actor {
 
   public query ({ caller }) func getAllCategories() : async [Category] {
     categories;
+  };
+
+  public query ({ caller }) func getCategoriesByType(categoryType : Text) : async [Category] {
+    //. This function is only implemented in the backend so that it is does not manifest as a frontend error until it is fully connected to the UI.
+    let allCategories = [
+      { name = "Vegetables" },
+      { name = "Dairy" },
+      { name = "Non-Veg" },
+      { name = "Spices" },
+      { name = "Beverages" },
+    ];
+    if (categoryType == "All") { return allCategories };
+    switch (categoryType) {
+      case ("Veg") { [{ name = "Vegetables" }] };
+      case ("Non-Veg") { [{ name = "Non-Veg" }] };
+      case ("Dairy") { [{ name = "Dairy" }] };
+      case ("Spices") { [{ name = "Spices" }] };
+      case ("Beverages") { [{ name = "Beverages" }] };
+      case (_) { [] };
+    };
   };
 };

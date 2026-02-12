@@ -1,20 +1,64 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-12T15:35:59.270Z",
+  "generatedAt": "2026-02-12T15:42:29.841Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 0,
-    "implemented": 0,
-    "items": []
+    "total": 2,
+    "implemented": 2,
+    "items": [
+      {
+        "id": "REQ-22",
+        "summary": "Trigger a production deployment so the current Restaurant Inventory app build is live (production), and confirm the production frontend can reach the production backend without showing connectivity errors.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useActor.ts",
+          "frontend/src/hooks/useActorDiagnostics.ts",
+          "frontend/src/components/BackendConnectionErrorCard.tsx",
+          "frontend/src/pages/DailyEntryPage.tsx",
+          "frontend/src/pages/HistoryPage.tsx",
+          "frontend/src/pages/RecordDetailPage.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useActorDiagnostics.ts",
+          "frontend/src/components/BackendConnectionErrorCard.tsx",
+          "frontend/src/pages/DailyEntryPage.tsx",
+          "frontend/src/pages/HistoryPage.tsx",
+          "frontend/src/pages/RecordDetailPage.tsx"
+        ]
+      },
+      {
+        "id": "REQ-23",
+        "summary": "Provide the live (production) app URL for the deployed frontend in a repo file named LIVE_URL.md (English text), and ensure the link is the one end-users should open in a browser.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/LIVE_URL.md"
+        ],
+        "matchedFiles": [
+          "frontend/LIVE_URL.md"
+        ]
+      }
+    ]
   },
   "changedFiles": [
+    "backend/main.mo",
     "build-request.json",
     "feature_evidence.json",
+    "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
+    "frontend/LIVE_URL.md",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/components/BackendConnectionErrorCard.tsx",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
+    "frontend/src/hooks/useActorDiagnostics.ts",
+    "frontend/src/pages/DailyEntryPage.tsx",
+    "frontend/src/pages/HistoryPage.tsx",
+    "frontend/src/pages/RecordDetailPage.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

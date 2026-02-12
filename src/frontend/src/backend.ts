@@ -111,6 +111,7 @@ export interface backendInterface {
     addDailyRecord(meals: Array<Meal>, timestamp: Timestamp): Promise<DailyRecordId>;
     getAllCategories(): Promise<Array<Category>>;
     getAllDailyRecords(): Promise<Array<DailyRecord>>;
+    getCategoriesByType(categoryType: string): Promise<Array<Category>>;
     getIngredientsByCategory(category: CategoryName): Promise<Array<Ingredient>>;
 }
 export class Backend implements backendInterface {
@@ -154,6 +155,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.getAllDailyRecords();
+            return result;
+        }
+    }
+    async getCategoriesByType(arg0: string): Promise<Array<Category>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getCategoriesByType(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getCategoriesByType(arg0);
             return result;
         }
     }

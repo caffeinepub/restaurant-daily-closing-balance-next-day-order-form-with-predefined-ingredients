@@ -1,4 +1,45 @@
 {
   "kind": "feature_evidence_report",
-  "features": []
+  "features": [
+    {
+      "featureId": "feature-trigger-a-production-deployment-so-the-current-restaurant-inventory-app-build-is-live-production-and-confirm-the-production-frontend-can-reach-the-production-backend-without-showing-connectivity-errors",
+      "featureTitle": "Trigger a production deployment so the current Restaurant Inventory app build is live (production), and confirm the production frontend can reach the production backend without showing connectivity errors.",
+      "files": [
+        "frontend/src/components/BackendConnectionErrorCard.tsx",
+        "frontend/src/hooks/useActorDiagnostics.ts",
+        "frontend/src/pages/DailyEntryPage.tsx",
+        "frontend/src/pages/HistoryPage.tsx",
+        "frontend/src/pages/RecordDetailPage.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-22"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-provide-the-live-production-app-url-for-the-deployed-frontend-in-a-repo-file-named-live-url-md-english-text-and-ensure-the-link-is-the-one-end-users-should-open-in-a-browser",
+      "featureTitle": "Provide the live (production) app URL for the deployed frontend in a repo file named LIVE_URL.md (English text), and ensure the link is the one end-users should open in a browser.",
+      "files": [
+        "frontend/LIVE_URL.md"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-23"
+      ],
+      "confidence": "high"
+    }
+  ]
 }

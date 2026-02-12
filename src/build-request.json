@@ -1,15 +1,51 @@
 {
   "kind": "build_request",
-  "title": "Attempt production deployment again",
-  "priority": "normal",
-  "requirements": [],
+  "title": "Deploy to production and provide live app link",
+  "priority": "high",
+  "requirements": [
+    {
+      "id": "REQ-22",
+      "text": "Trigger a production deployment so the current Restaurant Inventory app build is live (production), and confirm the production frontend can reach the production backend without showing connectivity errors.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "recent-messages-4"
+        ],
+        "quotes": [
+          "no just make it live and provide me the link to use it"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Production deployment completes successfully (no generic \"Deployment error\").",
+        "Opening the production frontend loads the app without a backend connection error.",
+        "On production: a user can create/save a Daily Entry record for a selected Balance Date and then view that record in History and Record Details."
+      ]
+    },
+    {
+      "id": "REQ-23",
+      "text": "Provide the live (production) app URL for the deployed frontend in a repo file named LIVE_URL.md (English text), and ensure the link is the one end-users should open in a browser.",
+      "target": "unknown",
+      "source": {
+        "messageIds": [
+          "recent-messages-4"
+        ],
+        "quotes": [
+          "no just make it live and provide me the link to use it"
+        ]
+      },
+      "acceptanceCriteria": [
+        "A LIVE_URL.md file exists at the repository root.",
+        "LIVE_URL.md contains the full production URL (including https://) that loads the deployed app when opened in a browser."
+      ]
+    }
+  ],
   "constraints": [
-    "Backend must remain a single Motoko actor in backend/main.mo; only add backend/migration.mo if an upgrade requires state migration.",
-    "Do not edit frontend immutable paths: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui (compose instead).",
-    "Use English for any user-facing text."
+    "Respect the single-actor backend architecture (all Motoko logic in backend/main.mo).",
+    "Do not modify files under frontend/src/components/ui or other frontend immutablePaths listed in SYSTEM_CONTEXT."
   ],
   "nonGoals": [
-    "Adding new product features unrelated to production deployment and verification."
+    "Adding new product features beyond making the current app live and providing the live link.",
+    "Changing ingredient lists, record formats, or UI layout (unless required to resolve a deployment/production connectivity blocker)."
   ],
   "imageRequirements": {
     "required": [],

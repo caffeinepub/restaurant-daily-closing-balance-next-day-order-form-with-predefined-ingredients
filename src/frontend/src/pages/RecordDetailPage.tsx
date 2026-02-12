@@ -16,7 +16,7 @@ import { useState } from 'react';
 export default function RecordDetailPage() {
   const { recordId } = useParams({ from: '/history/$recordId' });
   const { data: records, isLoading, error } = useGetAllDailyRecords();
-  const { hasActorError, retry } = useActorDiagnostics();
+  const { hasActorError, isActorLoading, retry } = useActorDiagnostics();
   const [isRetrying, setIsRetrying] = useState(false);
   const navigate = useNavigate();
 
@@ -62,24 +62,24 @@ export default function RecordDetailPage() {
   const handleRetry = async () => {
     setIsRetrying(true);
     retry();
-    setTimeout(() => setIsRetrying(false), 1000);
+    setTimeout(() => setIsRetrying(false), 1500);
   };
 
-  // Show connection error if actor failed to initialize
+  // Show connection error only if actor initialization actually failed
   if (hasActorError) {
     return (
       <div className="max-w-7xl mx-auto">
         <BackendConnectionErrorCard
           onRetry={handleRetry}
           isRetrying={isRetrying}
-          errorMessage="Unable to connect to the backend service"
+          errorMessage="Failed to initialize backend connection. Please check your network and try again."
         />
       </div>
     );
   }
 
-  // Show error if fetch failed
-  if (error && !isLoading) {
+  // Show error if fetch failed (but actor is OK)
+  if (error && !isLoading && !isActorLoading) {
     return (
       <div className="max-w-7xl mx-auto">
         <BackendConnectionErrorCard
@@ -91,10 +91,13 @@ export default function RecordDetailPage() {
     );
   }
 
-  if (isLoading) {
+  if (isLoading || isActorLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        <div className="text-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground mx-auto" />
+          <p className="text-sm text-muted-foreground">Loading record...</p>
+        </div>
       </div>
     );
   }

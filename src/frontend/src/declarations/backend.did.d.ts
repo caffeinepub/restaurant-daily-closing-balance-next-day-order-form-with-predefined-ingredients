@@ -21,6 +21,7 @@ export interface _SERVICE {
   'addDailyRecord' : ActorMethod<[Array<Meal>, Timestamp], DailyRecordId>,
   'getAllCategories' : ActorMethod<[], Array<Category>>,
   'getAllDailyRecords' : ActorMethod<[], Array<DailyRecord>>,
+  'getCategoriesByType' : ActorMethod<[string], Array<Category>>,
   'getIngredientsByCategory' : ActorMethod<[CategoryName], Array<Ingredient>>,
 }
 export declare const idlService: IDL.ServiceClass;

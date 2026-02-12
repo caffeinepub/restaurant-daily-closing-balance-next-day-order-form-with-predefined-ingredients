@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, RefreshCw } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface BackendConnectionErrorCardProps {
   onRetry: () => void;
@@ -21,28 +22,35 @@ export default function BackendConnectionErrorCard({
           <CardTitle>Connection Error</CardTitle>
         </div>
         <CardDescription>
-          Unable to connect to the backend service. Please check your connection and try again.
+          Unable to connect to the backend service. This may be due to network issues or the service being temporarily unavailable.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         {errorMessage && (
-          <p className="text-sm text-muted-foreground mb-4 font-mono bg-muted p-2 rounded">
-            {errorMessage}
-          </p>
+          <Alert variant="destructive">
+            <AlertDescription className="font-mono text-xs break-all">
+              {errorMessage}
+            </AlertDescription>
+          </Alert>
         )}
-        <Button onClick={onRetry} disabled={isRetrying} className="gap-2">
-          {isRetrying ? (
-            <>
-              <RefreshCw className="w-4 h-4 animate-spin" />
-              Retrying...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="w-4 h-4" />
-              Retry Connection
-            </>
-          )}
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button onClick={onRetry} disabled={isRetrying} className="gap-2">
+            {isRetrying ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                Retrying...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4" />
+                Retry Connection
+              </>
+            )}
+          </Button>
+          <p className="text-xs text-muted-foreground text-center">
+            If the problem persists, please check your internet connection or try again later.
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

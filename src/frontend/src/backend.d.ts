@@ -29,5 +29,6 @@ export interface backendInterface {
     addDailyRecord(meals: Array<Meal>, timestamp: Timestamp): Promise<DailyRecordId>;
     getAllCategories(): Promise<Array<Category>>;
     getAllDailyRecords(): Promise<Array<DailyRecord>>;
+    getCategoriesByType(categoryType: string): Promise<Array<Category>>;
     getIngredientsByCategory(category: CategoryName): Promise<Array<Ingredient>>;
 }

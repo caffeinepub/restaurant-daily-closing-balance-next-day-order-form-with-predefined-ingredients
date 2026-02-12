@@ -29,6 +29,7 @@ export const idlService = IDL.Service({
   'addDailyRecord' : IDL.Func([IDL.Vec(Meal), Timestamp], [DailyRecordId], []),
   'getAllCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
   'getAllDailyRecords' : IDL.Func([], [IDL.Vec(DailyRecord)], ['query']),
+  'getCategoriesByType' : IDL.Func([IDL.Text], [IDL.Vec(Category)], ['query']),
   'getIngredientsByCategory' : IDL.Func(
       [CategoryName],
       [IDL.Vec(Ingredient)],
@@ -64,6 +65,11 @@ export const idlFactory = ({ IDL }) => {
       ),
     'getAllCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
     'getAllDailyRecords' : IDL.Func([], [IDL.Vec(DailyRecord)], ['query']),
+    'getCategoriesByType' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(Category)],
+        ['query'],
+      ),
     'getIngredientsByCategory' : IDL.Func(
         [CategoryName],
         [IDL.Vec(Ingredient)],

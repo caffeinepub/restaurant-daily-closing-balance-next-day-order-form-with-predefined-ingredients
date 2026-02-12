@@ -1,20 +1,71 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-12T15:35:59.267Z",
-  "summary": "BuildRequest contains no explicit requirements; the diff only updates `project_state.json` to describe a restaurant inventory/order app feature set unrelated to “attempt production deployment again.” No requested requirements are missing, but the diff introduces unrequested product features in the project state metadata.",
-  "missing_requirements": [],
+  "generatedAt": "2026-02-12T15:42:29.838Z",
+  "summary": "REQ-22 (production deployment + verified frontend↔backend connectivity in production) is not evidenced in the diff, and REQ-23 is implemented incorrectly: LIVE_URL.md is not at repo root and contains a placeholder URL rather than a real production URL. The diff also introduces multiple unrequested/at-risk changes (notably backend data model/logic changes and extra documentation/feature claims) that go beyond “make current app live.”",
+  "missing_requirements": [
+    {
+      "id": "REQ-22",
+      "requirement": "Trigger a production deployment so the current app is live (production) and confirm the production frontend can reach the production backend without connectivity errors; verify create/save Daily Entry and view it in History/Record Details on production.",
+      "reason": "The diff only shows code and UI changes; there is no evidence of an actual production deployment being triggered/completed, nor any production connectivity verification or production URL/canister configuration proof. Acceptance criteria about successful production deployment and end-to-end production behavior are not verifiable from the provided changes.",
+      "evidence": [
+        "file-diff summary shows only source changes; no deploy artifacts/commands/logs/CI changes included"
+      ]
+    },
+    {
+      "id": "REQ-23",
+      "requirement": "Provide the live (production) app URL for the deployed frontend in a repo file named LIVE_URL.md at the repository root, containing the full production https:// URL end-users should open.",
+      "reason": "LIVE_URL.md was added under frontend/ (not repository root), and the URL inside is a placeholder (\"https://your-canister-id.icp0.io\") rather than a real deployed production URL.",
+      "evidence": [
+        "frontend/LIVE_URL.md (added at frontend/ not repo root)",
+        "frontend/LIVE_URL.md contains placeholder URL: https://your-canister-id.icp0.io"
+      ]
+    }
+  ],
   "hallucinated_features": [
     {
-      "description": "Introduces/updates project state summary and feature list for a restaurant inventory/order app (ingredients grouped by category, daily closing balances/next-day orders, history view, CSV export, theming, etc.), which is unrelated to the stated goal of attempting production deployment again.",
-      "reason": "BuildRequest explicitly has “Requirements: none” and “Non-goals: Adding new product features unrelated to production deployment and verification.” The only modified file describes new/updated product features rather than deployment-related changes.",
+      "description": "Added end-user usage instructions, feature checklist, and support guidance in LIVE_URL.md (including claims like CSV export, retry button, Google Drive/Sheets wording, and caffeine.ai attribution).",
+      "reason": "REQ-23 only asks for a root-level LIVE_URL.md containing the live production URL; the additional marketing/support/feature-claim content is not requested and risks being inaccurate (especially with a placeholder URL).",
       "evidence": [
-        "project_state.json"
+        "frontend/LIVE_URL.md"
+      ]
+    },
+    {
+      "description": "Introduced new frontend diagnostics/error UX (BackendConnectionErrorCard, useActorDiagnostics) and rewired multiple pages to use it.",
+      "reason": "The BuildRequest is focused on production deployment + providing the live link; while connectivity fixes may be related, these specific new UI components and hooks are not explicitly requested and may be considered additional feature work beyond the deployment/link tasks.",
+      "evidence": [
+        "frontend/src/components/BackendConnectionErrorCard.tsx",
+        "frontend/src/hooks/useActorDiagnostics.ts",
+        "frontend/src/pages/DailyEntryPage.tsx",
+        "frontend/src/pages/HistoryPage.tsx",
+        "frontend/src/pages/RecordDetailPage.tsx"
+      ]
+    },
+    {
+      "description": "Backend changes that appear to alter/expand backend domain logic and data structures (e.g., DailyRecord with meals/timestamp, category APIs like getCategoriesByType, and ingredient/category lists edits).",
+      "reason": "Non-goals/constraints state not to change ingredient lists, record formats, or add new product features unless required to resolve a deployment/production connectivity blocker. The diff shows substantial backend logic/data changes without clear evidence they are strictly required for production deployment connectivity.",
+      "evidence": [
+        "backend/main.mo"
+      ]
+    },
+    {
+      "description": "Changed global styling/theme configuration (index.css, tailwind config) and other frontend assets/config per summaries.",
+      "reason": "The BuildRequest explicitly lists UI/layout changes as non-goals unless required to resolve a deployment/production connectivity blocker; the diff summary indicates multiple styling/theme/config adjustments that are not directly requested in REQ-22/REQ-23.",
+      "evidence": [
+        "frontend-file-summaries.txt (mentions frontend/src/index.css, frontend/tailwind.config.js, frontend/index.html, frontend/src/config.ts)"
       ]
     }
   ],
   "confidence": 0.74,
   "changed_files": [
+    "backend/main.mo",
+    "frontend-file-summaries.txt",
+    "frontend/LIVE_URL.md",
+    "frontend/src/components/BackendConnectionErrorCard.tsx",
+    "frontend/src/hooks/useActorDiagnostics.ts",
+    "frontend/src/pages/DailyEntryPage.tsx",
+    "frontend/src/pages/HistoryPage.tsx",
+    "frontend/src/pages/RecordDetailPage.tsx",
     "project_state.json"
   ]
 }

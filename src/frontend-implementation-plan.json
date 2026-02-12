@@ -1,6 +1,63 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Attempt production deployment again",
-  "requirements": []
+  "title": "Production readiness checks and live URL documentation (frontend-only)",
+  "requirements": [
+    {
+      "id": "REQ-22",
+      "summary": "Harden frontend backend-connection detection/retry so production loads without false connectivity errors and core create→history→detail flow works when backend is reachable.",
+      "acceptanceCriteria": [
+        "Production deployment completes successfully (no generic \"Deployment error\").",
+        "Opening the production frontend loads the app without a backend connection error.",
+        "On production: a user can create/save a Daily Entry record for a selected Balance Date and then view that record in History and Record Details."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useActor.ts",
+          "operation": "modify",
+          "description": "Improve actor initialization state reporting for production (e.g., expose explicit loading/error states from the actor query, avoid treating \"not yet loaded\" as a hard connection error) so the UI does not incorrectly show connectivity failures."
+        },
+        {
+          "path": "frontend/src/hooks/useActorDiagnostics.ts",
+          "operation": "modify",
+          "description": "Update diagnostics to rely on the explicit actor loading/error state (from useActor) for determining readiness vs. connection failure, and ensure retry reliably triggers actor re-creation/refetch."
+        },
+        {
+          "path": "frontend/src/components/BackendConnectionErrorCard.tsx",
+          "operation": "modify",
+          "description": "Refine displayed error information and retry UX to reflect actual actor connection errors (when present) and avoid generic/false errors. Use existing shadcn-ui primitives already imported in the file. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/pages/DailyEntryPage.tsx",
+          "operation": "modify",
+          "description": "Adjust page-level gating to use the improved actor readiness/error signals so users are not blocked by false connection errors in production; keep save flow unchanged aside from better error messaging when backend is truly unreachable."
+        },
+        {
+          "path": "frontend/src/pages/HistoryPage.tsx",
+          "operation": "modify",
+          "description": "Align History loading/error states with improved actor diagnostics to prevent false backend error screens and ensure retry restores data loading when backend becomes reachable."
+        },
+        {
+          "path": "frontend/src/pages/RecordDetailPage.tsx",
+          "operation": "modify",
+          "description": "Align Record Details loading/error states with improved actor diagnostics to prevent false backend error screens and ensure retry restores data loading when backend becomes reachable."
+        }
+      ]
+    },
+    {
+      "id": "REQ-23",
+      "summary": "Add a repo-tracked live URL document containing the production app link for end users.",
+      "acceptanceCriteria": [
+        "A LIVE_URL.md file exists at the repository root.",
+        "LIVE_URL.md contains the full production URL (including https://) that loads the deployed app when opened in a browser."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/LIVE_URL.md",
+          "operation": "create",
+          "description": "Create a live URL documentation file containing the full production URL (including https://) intended for end users to open in a browser. Note: this frontend-only plan places the file under frontend/; ensure it is surfaced at repository root as LIVE_URL.md during the release/deployment process."
+        }
+      ]
+    }
+  ]
 }
