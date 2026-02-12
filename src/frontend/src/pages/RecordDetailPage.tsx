@@ -20,8 +20,9 @@ export default function RecordDetailPage() {
   const [isRetrying, setIsRetrying] = useState(false);
   const navigate = useNavigate();
 
-  const recordIndex = parseInt(recordId, 10);
-  const record = records?.[recordIndex];
+  // Find record by timestamp instead of index
+  const recordTimestamp = BigInt(recordId);
+  const record = records?.find((r) => r.timestamp === recordTimestamp);
 
   const formatDate = (timestamp: bigint) => {
     const date = new Date(Number(timestamp));

@@ -23,8 +23,8 @@ export default function HistoryPage() {
     });
   };
 
-  const handleViewRecord = (index: number) => {
-    navigate({ to: '/history/$recordId', params: { recordId: index.toString() } });
+  const handleViewRecord = (timestamp: bigint) => {
+    navigate({ to: '/history/$recordId', params: { recordId: timestamp.toString() } });
   };
 
   const handleRetry = async () => {
@@ -74,33 +74,29 @@ export default function HistoryPage() {
                 <p className="text-sm text-muted-foreground">Loading records...</p>
               </div>
             </div>
-          ) : !records || records.length === 0 ? (
-            <div className="text-center py-12">
-              <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground mb-4">No records saved yet</p>
-              <Button onClick={() => navigate({ to: '/' })}>Create First Record</Button>
-            </div>
-          ) : (
+          ) : records && records.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Balance Date</TableHead>
-                    <TableHead>Entries</TableHead>
+                    <TableHead>Ingredients</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {records.map((record, index) => (
-                    <TableRow key={index}>
+                  {records.map((record) => (
+                    <TableRow key={record.timestamp.toString()}>
                       <TableCell className="font-medium">{formatDate(record.timestamp)}</TableCell>
-                      <TableCell>{record.entries.length} ingredients</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {record.entries.length} ingredient{record.entries.length !== 1 ? 's' : ''}
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button
                           variant="ghost"
                           size="sm"
                           className="gap-2"
-                          onClick={() => handleViewRecord(index)}
+                          onClick={() => handleViewRecord(record.timestamp)}
                         >
                           View Details
                           <ChevronRight className="w-4 h-4" />
@@ -110,6 +106,14 @@ export default function HistoryPage() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground mb-2">No records saved yet</p>
+              <p className="text-sm text-muted-foreground">
+                Start by creating a daily entry from the Daily Entry page
+              </p>
             </div>
           )}
         </CardContent>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +23,7 @@ export default function DailyEntryPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [balanceDate, setBalanceDate] = useState('');
+  const navigate = useNavigate();
 
   const handleRetry = async () => {
     setIsRetrying(true);
@@ -51,6 +53,8 @@ export default function DailyEntryPage() {
       toast.success('Daily record saved successfully!');
       reset();
       setBalanceDate('');
+      // Navigate to the saved record details using timestamp as the ID
+      navigate({ to: '/history/$recordId', params: { recordId: timestamp.toString() } });
     } catch (error) {
       toast.error('Failed to save record. Please try again.');
       console.error('Save error:', error);
@@ -83,6 +87,11 @@ export default function DailyEntryPage() {
       toast.error('Failed to copy to clipboard');
       console.error('Copy error:', error);
     }
+  };
+
+  const handleClearForm = () => {
+    reset();
+    setBalanceDate('');
   };
 
   // Show connection error only if actor initialization actually failed
@@ -210,19 +219,19 @@ export default function DailyEntryPage() {
               })}
 
               <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={reset} disabled={isSaving || !isActorReady}>
+                <Button variant="outline" onClick={handleClearForm} disabled={isSaving}>
                   Clear Form
                 </Button>
                 <Button
                   variant="secondary"
                   onClick={handleCopyForVendor}
-                  disabled={isSaving || !isActorReady}
+                  disabled={isSaving}
                   className="gap-2"
                 >
                   <Copy className="w-4 h-4" />
                   Copy for Vendor
                 </Button>
-                <Button onClick={handleSave} disabled={isSaving || !isActorReady} className="gap-2">
+                <Button onClick={handleSave} disabled={isSaving} className="gap-2">
                   {isSaving ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />

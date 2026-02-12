@@ -2,11 +2,30 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-trigger-a-production-deployment-so-the-current-restaurant-inventory-app-build-is-live-production-and-confirm-the-production-frontend-can-reach-the-production-backend-without-showing-connectivity-errors",
-      "featureTitle": "Trigger a production deployment so the current Restaurant Inventory app build is live (production), and confirm the production frontend can reach the production backend without showing connectivity errors.",
+      "featureId": "feature-publish-the-latest-build-version-11-to-production-so-the-end-user-facing-live-app-is-updated",
+      "featureTitle": "Publish the latest build (Version 11) to production so the end-user-facing live app is updated.",
       "files": [
-        "frontend/src/components/BackendConnectionErrorCard.tsx",
-        "frontend/src/hooks/useActorDiagnostics.ts",
+        "frontend/PRODUCTION_SMOKE_TEST.md",
+        "frontend/src/components/AppLayout.tsx",
+        "frontend/src/components/BackendConnectionErrorCard.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-29"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-after-publishing-version-11-verify-the-production-site-against-the-checklist-in-frontend-production-smoke-test-md-including-that-the-daily-entry-page-action-buttons-clear-form-copy-for-vendor-save-record-are-enabled-and-functional",
+      "featureTitle": "After publishing Version 11, verify the production site against the checklist in frontend/PRODUCTION_SMOKE_TEST.md, including that the Daily Entry page action buttons (Clear Form, Copy for Vendor, Save Record) are enabled and functional.",
+      "files": [
+        "frontend/PRODUCTION_SMOKE_TEST.md",
         "frontend/src/pages/DailyEntryPage.tsx",
         "frontend/src/pages/HistoryPage.tsx",
         "frontend/src/pages/RecordDetailPage.tsx"
@@ -19,13 +38,13 @@
         "github-export-icp-cli@1.0.0"
       ],
       "testIds": [
-        "REQ-22"
+        "REQ-30"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-provide-the-live-production-app-url-for-the-deployed-frontend-in-a-repo-file-named-live-url-md-english-text-and-ensure-the-link-is-the-one-end-users-should-open-in-a-browser",
-      "featureTitle": "Provide the live (production) app URL for the deployed frontend in a repo file named LIVE_URL.md (English text), and ensure the link is the one end-users should open in a browser.",
+      "featureId": "feature-if-the-production-frontend-url-changes-as-a-result-of-publishing-version-11-update-frontend-live-url-md-to-contain-the-correct-live-production-app-url-that-end-users-should-open-in-a-browser",
+      "featureTitle": "If the production frontend URL changes as a result of publishing Version 11, update frontend/LIVE_URL.md to contain the correct live (production) app URL that end users should open in a browser.",
       "files": [
         "frontend/LIVE_URL.md"
       ],
@@ -37,7 +56,7 @@
         "github-export-icp-cli@1.0.0"
       ],
       "testIds": [
-        "REQ-23"
+        "REQ-31"
       ],
       "confidence": "high"
     }

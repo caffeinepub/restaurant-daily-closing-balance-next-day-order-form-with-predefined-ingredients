@@ -1,58 +1,48 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-12T15:42:29.838Z",
-  "summary": "REQ-22 (production deployment + verified frontend↔backend connectivity in production) is not evidenced in the diff, and REQ-23 is implemented incorrectly: LIVE_URL.md is not at repo root and contains a placeholder URL rather than a real production URL. The diff also introduces multiple unrequested/at-risk changes (notably backend data model/logic changes and extra documentation/feature claims) that go beyond “make current app live.”",
+  "generatedAt": "2026-02-12T16:40:48.670Z",
+  "summary": "Diff updates several frontend pages/components (adds Version 11 label, improves backend connection error UI, changes navigation to use timestamp IDs), updates LIVE_URL.md, and modifies backend/main.mo significantly (data model, ingredient/category lists, and new category filtering). There is no evidence of an actual production deployment trigger/completion or of post-deploy verification being performed.",
   "missing_requirements": [
     {
-      "id": "REQ-22",
-      "requirement": "Trigger a production deployment so the current app is live (production) and confirm the production frontend can reach the production backend without connectivity errors; verify create/save Daily Entry and view it in History/Record Details on production.",
-      "reason": "The diff only shows code and UI changes; there is no evidence of an actual production deployment being triggered/completed, nor any production connectivity verification or production URL/canister configuration proof. Acceptance criteria about successful production deployment and end-to-end production behavior are not verifiable from the provided changes.",
+      "id": "REQ-29",
+      "requirement": "Publish the latest build (Version 11) to production so the end-user-facing live app is updated, and confirm the production frontend loads without backend connectivity error.",
+      "reason": "The diff only shows code/documentation changes; it does not include any deployment configuration, CI/CD trigger, release artifact, or other evidence that a production deployment was executed and completed successfully or that the live app was confirmed to load without connectivity errors.",
       "evidence": [
-        "file-diff summary shows only source changes; no deploy artifacts/commands/logs/CI changes included"
+        "file-diff summary: only source/documentation files modified; no deployment-related files shown"
       ]
     },
     {
-      "id": "REQ-23",
-      "requirement": "Provide the live (production) app URL for the deployed frontend in a repo file named LIVE_URL.md at the repository root, containing the full production https:// URL end-users should open.",
-      "reason": "LIVE_URL.md was added under frontend/ (not repository root), and the URL inside is a placeholder (\"https://your-canister-id.icp0.io\") rather than a real deployed production URL.",
+      "id": "REQ-30",
+      "requirement": "After publishing Version 11, verify the production site against frontend/PRODUCTION_SMOKE_TEST.md (Daily Entry buttons enabled and functional; Clear Form resets Balance Date; Copy for Vendor validation and copy; Save Record persists and appears in History and opens in Record Details).",
+      "reason": "While the checklist file exists/was modified (truncated view) and related UI logic appears implemented, the diff contains no evidence of performing or recording the production verification itself (no test run output, sign-off, or results).",
       "evidence": [
-        "frontend/LIVE_URL.md (added at frontend/ not repo root)",
-        "frontend/LIVE_URL.md contains placeholder URL: https://your-canister-id.icp0.io"
+        "frontend/PRODUCTION_SMOKE_TEST.md",
+        "file-diff summary: no verification artifacts/logs included"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Added end-user usage instructions, feature checklist, and support guidance in LIVE_URL.md (including claims like CSV export, retry button, Google Drive/Sheets wording, and caffeine.ai attribution).",
-      "reason": "REQ-23 only asks for a root-level LIVE_URL.md containing the live production URL; the additional marketing/support/feature-claim content is not requested and risks being inaccurate (especially with a placeholder URL).",
+      "description": "Backend changes the predefined category set beyond the three defined categories (adds e.g., \"Spices\" and \"Beverages\") and adds a getCategoriesByType API.",
+      "reason": "BuildRequest explicitly lists as a non-goal: changing the predefined ingredient list, categories, or record format as part of this publish step. Adding new categories and a new category-filtering API is a product change not requested for publishing Version 11.",
       "evidence": [
-        "frontend/LIVE_URL.md"
+        "backend/main.mo (getCategoriesByType defines allCategories including \"Spices\" and \"Beverages\")"
       ]
     },
     {
-      "description": "Introduced new frontend diagnostics/error UX (BackendConnectionErrorCard, useActorDiagnostics) and rewired multiple pages to use it.",
-      "reason": "The BuildRequest is focused on production deployment + providing the live link; while connectivity fixes may be related, these specific new UI components and hooks are not explicitly requested and may be considered additional feature work beyond the deployment/link tasks.",
+      "description": "Backend modifies the predefined ingredient list (e.g., adds \"Dahi\").",
+      "reason": "Non-goal prohibits changing the predefined ingredient list as part of the publish step; the diff shows ingredient list changes in backend/main.mo.",
       "evidence": [
-        "frontend/src/components/BackendConnectionErrorCard.tsx",
-        "frontend/src/hooks/useActorDiagnostics.ts",
-        "frontend/src/pages/DailyEntryPage.tsx",
-        "frontend/src/pages/HistoryPage.tsx",
-        "frontend/src/pages/RecordDetailPage.tsx"
+        "backend/main.mo (ingredients array includes \"Dahi\")"
       ]
     },
     {
-      "description": "Backend changes that appear to alter/expand backend domain logic and data structures (e.g., DailyRecord with meals/timestamp, category APIs like getCategoriesByType, and ingredient/category lists edits).",
-      "reason": "Non-goals/constraints state not to change ingredient lists, record formats, or add new product features unless required to resolve a deployment/production connectivity blocker. The diff shows substantial backend logic/data changes without clear evidence they are strictly required for production deployment connectivity.",
+      "description": "Backend appears to change the daily record data model/record format (introduces Meal/Ingredient/DailyRecord with meals/timestamp) which may diverge from the existing frontend 'entries' based record structure.",
+      "reason": "Non-goal prohibits changing the record format as part of this publish step; the backend diff shows a different DailyRecord structure (meals/timestamp) and addDailyRecord signature that does not match the frontend usage shown in the diff summary (which passes 'entries').",
       "evidence": [
-        "backend/main.mo"
-      ]
-    },
-    {
-      "description": "Changed global styling/theme configuration (index.css, tailwind config) and other frontend assets/config per summaries.",
-      "reason": "The BuildRequest explicitly lists UI/layout changes as non-goals unless required to resolve a deployment/production connectivity blocker; the diff summary indicates multiple styling/theme/config adjustments that are not directly requested in REQ-22/REQ-23.",
-      "evidence": [
-        "frontend-file-summaries.txt (mentions frontend/src/index.css, frontend/tailwind.config.js, frontend/index.html, frontend/src/config.ts)"
+        "backend/main.mo (type DailyRecord = { meals : [Meal]; timestamp : Timestamp; }, addDailyRecord(meals, timestamp))",
+        "frontend/src/pages/DailyEntryPage.tsx (calls addRecord.mutateAsync({ entries, timestamp }))"
       ]
     }
   ],
@@ -61,8 +51,9 @@
     "backend/main.mo",
     "frontend-file-summaries.txt",
     "frontend/LIVE_URL.md",
+    "frontend/PRODUCTION_SMOKE_TEST.md",
+    "frontend/src/components/AppLayout.tsx",
     "frontend/src/components/BackendConnectionErrorCard.tsx",
-    "frontend/src/hooks/useActorDiagnostics.ts",
     "frontend/src/pages/DailyEntryPage.tsx",
     "frontend/src/pages/HistoryPage.tsx",
     "frontend/src/pages/RecordDetailPage.tsx",

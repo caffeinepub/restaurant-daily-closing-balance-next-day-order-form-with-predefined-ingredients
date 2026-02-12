@@ -26,6 +26,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 <p className="text-sm text-muted-foreground">Daily closing & order tracker</p>
               </div>
             </div>
+            <div className="text-xs text-muted-foreground font-mono">
+              Version 11
+            </div>
           </div>
           <nav className="flex gap-2">
             <Link to="/">

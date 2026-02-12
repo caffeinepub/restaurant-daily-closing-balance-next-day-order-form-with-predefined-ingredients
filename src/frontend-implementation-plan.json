@@ -1,61 +1,82 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Production readiness checks and live URL documentation (frontend-only)",
+  "title": "Version 11 production publish readiness, smoke-test alignment, and live URL update",
   "requirements": [
     {
-      "id": "REQ-22",
-      "summary": "Harden frontend backend-connection detection/retry so production loads without false connectivity errors and core create→history→detail flow works when backend is reachable.",
+      "id": "REQ-29",
+      "summary": "Add lightweight production-visible build identification and ensure production connectivity errors are actionable.",
       "acceptanceCriteria": [
-        "Production deployment completes successfully (no generic \"Deployment error\").",
-        "Opening the production frontend loads the app without a backend connection error.",
-        "On production: a user can create/save a Daily Entry record for a selected Balance Date and then view that record in History and Record Details."
+        "A production deployment is triggered for Version 11 and completes successfully (no generic \"Deployment error\").",
+        "The production frontend loads in a browser without showing a backend connectivity error card (e.g., \"Canister Id not resolved\")."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/hooks/useActor.ts",
+          "path": "frontend/src/components/AppLayout.tsx",
           "operation": "modify",
-          "description": "Improve actor initialization state reporting for production (e.g., expose explicit loading/error states from the actor query, avoid treating \"not yet loaded\" as a hard connection error) so the UI does not incorrectly show connectivity failures."
-        },
-        {
-          "path": "frontend/src/hooks/useActorDiagnostics.ts",
-          "operation": "modify",
-          "description": "Update diagnostics to rely on the explicit actor loading/error state (from useActor) for determining readiness vs. connection failure, and ensure retry reliably triggers actor re-creation/refetch."
+          "description": "Display a small, non-intrusive \"Version 11\" label in the app chrome (e.g., footer/header) to confirm the live app is updated; keep all user-facing text in English. Verify the component's usage instructions before implementing."
         },
         {
           "path": "frontend/src/components/BackendConnectionErrorCard.tsx",
           "operation": "modify",
-          "description": "Refine displayed error information and retry UX to reflect actual actor connection errors (when present) and avoid generic/false errors. Use existing shadcn-ui primitives already imported in the file. Verify the component's usage instructions before implementing."
+          "description": "Refine the connection error presentation text to clearly distinguish \"backend not reachable\" vs \"configuration/canister resolution\" and to guide production troubleshooting without exposing secrets; preserve existing UI composition constraints. Verify the component's usage instructions before implementing."
         },
         {
-          "path": "frontend/src/pages/DailyEntryPage.tsx",
+          "path": "frontend/PRODUCTION_SMOKE_TEST.md",
           "operation": "modify",
-          "description": "Adjust page-level gating to use the improved actor readiness/error signals so users are not blocked by false connection errors in production; keep save flow unchanged aside from better error messaging when backend is truly unreachable."
-        },
-        {
-          "path": "frontend/src/pages/HistoryPage.tsx",
-          "operation": "modify",
-          "description": "Align History loading/error states with improved actor diagnostics to prevent false backend error screens and ensure retry restores data loading when backend becomes reachable."
-        },
-        {
-          "path": "frontend/src/pages/RecordDetailPage.tsx",
-          "operation": "modify",
-          "description": "Align Record Details loading/error states with improved actor diagnostics to prevent false backend error screens and ensure retry restores data loading when backend becomes reachable."
+          "description": "Update the checklist to include verifying the visible Version 11 label and reiterate the stop-condition for any backend connectivity error card in production."
         }
       ]
     },
     {
-      "id": "REQ-23",
-      "summary": "Add a repo-tracked live URL document containing the production app link for end users.",
+      "id": "REQ-30",
+      "summary": "Ensure the production smoke-test checklist behavior is met, including Daily Entry actions being enabled and Save navigating to the saved record details reliably.",
       "acceptanceCriteria": [
-        "A LIVE_URL.md file exists at the repository root.",
-        "LIVE_URL.md contains the full production URL (including https://) that loads the deployed app when opened in a browser."
+        "On the production URL, the Daily Entry page finishes loading and the three action buttons are clickable (not disabled/grayed out).",
+        "Clear Form clears entered inputs and resets the Balance Date field.",
+        "Copy for Vendor shows the required validation toast when Balance Date is missing, and successfully copies formatted text when Balance Date is set.",
+        "Save Record successfully saves a record and it appears in History and opens in Record Details."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/DailyEntryPage.tsx",
+          "operation": "modify",
+          "description": "After a successful Save Record, navigate directly to Record Details for the just-saved record using the known Balance Date timestamp as the route param; ensure Clear Form still resets inputs and Balance Date, and Copy for Vendor validation toasts remain unchanged. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/pages/HistoryPage.tsx",
+          "operation": "modify",
+          "description": "Change \"View Details\" navigation to use a stable record identifier (the record timestamp string) rather than the array index so production navigation remains correct after new saves/refetches. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/pages/RecordDetailPage.tsx",
+          "operation": "modify",
+          "description": "Update record lookup to resolve the route param as a timestamp and find the matching record by timestamp instead of treating the param as an index; keep loading/error behavior intact. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Confirm routing remains correctly wired for /history/$recordId with the updated semantics (recordId now representing a timestamp string) and that navigation links still function. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/PRODUCTION_SMOKE_TEST.md",
+          "operation": "modify",
+          "description": "Adjust the Save Record verification step to explicitly confirm the app opens the saved record in Record Details after saving, matching the updated timestamp-based navigation."
+        }
+      ]
+    },
+    {
+      "id": "REQ-31",
+      "summary": "Keep the documented production URL current after Version 11 publish.",
+      "acceptanceCriteria": [
+        "frontend/LIVE_URL.md contains the correct current production URL and no longer points to an outdated deployment.",
+        "The URL in frontend/LIVE_URL.md is reachable and loads the production app."
       ],
       "file_operations": [
         {
           "path": "frontend/LIVE_URL.md",
-          "operation": "create",
-          "description": "Create a live URL documentation file containing the full production URL (including https://) intended for end users to open in a browser. Note: this frontend-only plan places the file under frontend/; ensure it is surfaced at repository root as LIVE_URL.md during the release/deployment process."
+          "operation": "modify",
+          "description": "Update the live production URL to the current post-publish URL (only if it changed) and ensure the page still provides correct, English usage guidance for end users."
         }
       ]
     }

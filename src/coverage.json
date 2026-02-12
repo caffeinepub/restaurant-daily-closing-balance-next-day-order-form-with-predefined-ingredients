@@ -1,38 +1,51 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-12T15:42:29.841Z",
+  "generatedAt": "2026-02-12T16:40:48.674Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 2,
-    "implemented": 2,
+    "total": 3,
+    "implemented": 3,
     "items": [
       {
-        "id": "REQ-22",
-        "summary": "Trigger a production deployment so the current Restaurant Inventory app build is live (production), and confirm the production frontend can reach the production backend without showing connectivity errors.",
+        "id": "REQ-29",
+        "summary": "Publish the latest build (Version 11) to production so the end-user-facing live app is updated.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/hooks/useActor.ts",
-          "frontend/src/hooks/useActorDiagnostics.ts",
+          "frontend/src/components/AppLayout.tsx",
           "frontend/src/components/BackendConnectionErrorCard.tsx",
-          "frontend/src/pages/DailyEntryPage.tsx",
-          "frontend/src/pages/HistoryPage.tsx",
-          "frontend/src/pages/RecordDetailPage.tsx"
+          "frontend/PRODUCTION_SMOKE_TEST.md"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/useActorDiagnostics.ts",
+          "frontend/src/components/AppLayout.tsx",
           "frontend/src/components/BackendConnectionErrorCard.tsx",
-          "frontend/src/pages/DailyEntryPage.tsx",
-          "frontend/src/pages/HistoryPage.tsx",
-          "frontend/src/pages/RecordDetailPage.tsx"
+          "frontend/PRODUCTION_SMOKE_TEST.md"
         ]
       },
       {
-        "id": "REQ-23",
-        "summary": "Provide the live (production) app URL for the deployed frontend in a repo file named LIVE_URL.md (English text), and ensure the link is the one end-users should open in a browser.",
+        "id": "REQ-30",
+        "summary": "After publishing Version 11, verify the production site against the checklist in frontend/PRODUCTION_SMOKE_TEST.md, including that the Daily Entry page action buttons (Clear Form, Copy for Vendor, Save Record) are enabled and functional.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/pages/DailyEntryPage.tsx",
+          "frontend/src/pages/HistoryPage.tsx",
+          "frontend/src/pages/RecordDetailPage.tsx",
+          "frontend/src/App.tsx",
+          "frontend/PRODUCTION_SMOKE_TEST.md"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/DailyEntryPage.tsx",
+          "frontend/src/pages/HistoryPage.tsx",
+          "frontend/src/pages/RecordDetailPage.tsx",
+          "frontend/PRODUCTION_SMOKE_TEST.md"
+        ]
+      },
+      {
+        "id": "REQ-31",
+        "summary": "If the production frontend URL changes as a result of publishing Version 11, update frontend/LIVE_URL.md to contain the correct live (production) app URL that end users should open in a browser.",
         "status": "implemented",
         "plannedFiles": [
           "frontend/LIVE_URL.md"
@@ -50,12 +63,9 @@
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
     "frontend/LIVE_URL.md",
-    "frontend/src/backend.d.ts",
-    "frontend/src/backend.ts",
+    "frontend/PRODUCTION_SMOKE_TEST.md",
+    "frontend/src/components/AppLayout.tsx",
     "frontend/src/components/BackendConnectionErrorCard.tsx",
-    "frontend/src/declarations/backend.did.d.ts",
-    "frontend/src/declarations/backend.did.js",
-    "frontend/src/hooks/useActorDiagnostics.ts",
     "frontend/src/pages/DailyEntryPage.tsx",
     "frontend/src/pages/HistoryPage.tsx",
     "frontend/src/pages/RecordDetailPage.tsx",

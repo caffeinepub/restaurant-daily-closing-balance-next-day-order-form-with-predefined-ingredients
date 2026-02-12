@@ -1,15 +1,18 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 19,
+  "projectStateVersion": 25,
   "summary": "Build a simple restaurant inventory/order app with a form containing predefined ingredients grouped under Veg, Dairy, and Non-Veg (including \"wings\"), to record daily closing balance and next-day orders (with units) for a selected balance date, storing data persistently in-app (Google Drive/Sheets integration not supported), supporting non-mandatory inputs that default to 0 when left blank, and providing history records plus a one-tap copy-to-clipboard message format suitable for sending to a vendor via messaging.",
   "architectural_notes": [
-    "Google Drive/Google Sheets integration is not supported; use in-app persistent storage instead."
+    "Google Drive/Google Sheets integration is not supported; use in-app persistent storage instead.",
+    "User confirmed to proceed with publishing the latest successful build to production (production deployment/publish approved).",
+    "User approved publishing Version 11 to production for live testing (publish/deploy requested)."
   ],
   "known_issues": [
     "Users may encounter \"Canister Id not resolved\" when the frontend cannot reach the backend canister (deployment/network resolution issue).",
-    "Production deployment failed with a generic \"Deployment error\"; app changes are not live until a successful production deploy."
+    "Production deployment failed with a generic \"Deployment error\"; app changes are not live until a successful production deploy.",
+    "On the working app URL (https://devenderraje-mh2.caffeine.xyz), the Daily Entry actions are not functioning: Save Record, Copy, and Clear buttons do nothing."
   ],
-  "isFixRequest": false,
+  "isFixRequest": true,
   "existing_features": [
     {
       "id": "feature-create-a-data-entry-screen-that-renders-a-table-like-form-with-predefined-ingredient-names-already-filled-in-and-grouped-under-three-category-headers-vegetables-dairy-and-non-veg",
@@ -184,6 +187,70 @@
       "title": "Provide the live (production) app URL for the deployed frontend in a repo file named LIVE_URL.md (English text), and ensure the link is the one end-users should open in a browser.",
       "reqIds": [
         "REQ-23"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-publish-the-current-successfully-built-version-version-9-to-production-so-the-application-is-live-and-accessible-to-end-users",
+      "title": "Publish the current successfully built version (\"Version 9\") to production so the application is live and accessible to end users.",
+      "reqIds": [
+        "REQ-24"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-repository-file-frontend-live-url-md-to-contain-the-actual-live-production-app-url-for-the-deployed-frontend-replacing-the-placeholder-url-and-ensure-the-link-is-the-one-end-users-should-open-in-a-browser",
+      "title": "Update the repository file frontend/LIVE_URL.md to contain the actual live (production) app URL for the deployed frontend, replacing the placeholder URL, and ensure the link is the one end users should open in a browser.",
+      "reqIds": [
+        "REQ-25"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-backend-actor-readiness-detection-so-that-the-daily-entry-page-correctly-recognizes-when-the-backend-actor-is-available-and-does-not-keep-the-ui-actions-disabled-on-the-live-site-reported-at-https-devenderraje-mh2-caffeine-xyz",
+      "title": "Fix backend actor readiness detection so that the Daily Entry page correctly recognizes when the backend actor is available and does not keep the UI actions disabled on the live site (reported at https://devenderraje-mh2.caffeine.xyz).",
+      "reqIds": [
+        "REQ-26"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-the-daily-entry-clear-form-and-copy-for-vendor-actions-work-even-when-the-backend-connection-is-not-ready-since-these-actions-are-local-only-and-should-not-depend-on-backend-connectivity",
+      "title": "Ensure the Daily Entry 'Clear Form' and 'Copy for Vendor' actions work even when the backend connection is not ready, since these actions are local-only and should not depend on backend connectivity.",
+      "reqIds": [
+        "REQ-27"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-production-smoke-test-checklist-to-explicitly-verify-that-the-daily-entry-buttons-save-record-copy-for-vendor-clear-form-are-enabled-and-functional-on-the-live-url-and-to-flag-as-a-failure-if-they-are-disabled-or-non-responsive",
+      "title": "Update the production smoke test checklist to explicitly verify that the Daily Entry buttons (Save Record, Copy for Vendor, Clear Form) are enabled and functional on the live URL, and to flag as a failure if they are disabled or non-responsive.",
+      "reqIds": [
+        "REQ-28"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-publish-the-latest-build-version-11-to-production-so-the-end-user-facing-live-app-is-updated",
+      "title": "Publish the latest build (Version 11) to production so the end-user-facing live app is updated.",
+      "reqIds": [
+        "REQ-29"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-after-publishing-version-11-verify-the-production-site-against-the-checklist-in-frontend-production-smoke-test-md-including-that-the-daily-entry-page-action-buttons-clear-form-copy-for-vendor-save-record-are-enabled-and-functional",
+      "title": "After publishing Version 11, verify the production site against the checklist in frontend/PRODUCTION_SMOKE_TEST.md, including that the Daily Entry page action buttons (Clear Form, Copy for Vendor, Save Record) are enabled and functional.",
+      "reqIds": [
+        "REQ-30"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-if-the-production-frontend-url-changes-as-a-result-of-publishing-version-11-update-frontend-live-url-md-to-contain-the-correct-live-production-app-url-that-end-users-should-open-in-a-browser",
+      "title": "If the production frontend URL changes as a result of publishing Version 11, update frontend/LIVE_URL.md to contain the correct live (production) app URL that end users should open in a browser.",
+      "reqIds": [
+        "REQ-31"
       ],
       "version": 1
     }

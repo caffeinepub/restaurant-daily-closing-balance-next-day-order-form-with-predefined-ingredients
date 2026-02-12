@@ -2,7 +2,7 @@
 
 Your Daily Inventory Balance app is now live and accessible at:
 
-**https://your-canister-id.icp0.io**
+**https://5h5tz-wqaaa-aaaap-qkmqq-cai.icp0.io**
 
 ## How to Use
 
@@ -20,6 +20,7 @@ Your Daily Inventory Balance app is now live and accessible at:
 - ✅ Export to CSV for Google Drive/Sheets
 - ✅ View complete history of saved records
 - ✅ Detailed record view with all ingredient data
+- ✅ Automatic navigation to saved records
 
 ## Support
 
