@@ -1,0 +1,267 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 15,
+  "summary": "Build a simple restaurant inventory/order app with a form containing predefined ingredients grouped under Veg, Dairy, and Non-Veg (including \"wings\"), to record daily closing balance and next-day orders (with units) for a selected balance date, storing data persistently in-app (Google Drive/Sheets integration not supported), supporting non-mandatory inputs that default to 0 when left blank, and providing history records plus a one-tap copy-to-clipboard message format suitable for sending to a vendor via messaging.",
+  "architectural_notes": [
+    "Google Drive/Google Sheets integration is not supported; use in-app persistent storage instead."
+  ],
+  "known_issues": [
+    "Users may encounter \"Canister Id not resolved\" when the frontend cannot reach the backend canister (deployment/network resolution issue).",
+    "Production deployment failed with a generic \"Deployment error\"; app changes are not live until a successful production deploy."
+  ],
+  "isFixRequest": true,
+  "existing_features": [
+    {
+      "id": "feature-create-a-data-entry-screen-that-renders-a-table-like-form-with-predefined-ingredient-names-already-filled-in-and-grouped-under-three-category-headers-vegetables-dairy-and-non-veg",
+      "title": "Create a data-entry screen that renders a table-like form with predefined ingredient names already filled in and grouped under three category headers: Vegetables, Dairy, and Non-Veg.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-seed-the-app-with-the-following-predefined-ingredients-and-categories-exactly-as-provided-keep-user-facing-text-in-english-keep-ingredient-spellings-as-provided-vegetables-tomat-poatao-capsicum-carrot-cabbage-cauliflower-spring-onion-red-capsicum-yellow-capsicum-green-zuccini-yellow-zuccini-raw-papya-staff-vegetable-lemon-mint-ginger-garlic-dairy-milk-cream-butter-chaap-matar-egg-non-veg-chicken-bonless-tandoori-chicken-chicken-thai-mutton-boneless-mutton-cut",
+      "title": "Seed the app with the following predefined ingredients and categories exactly as provided (keep user-facing text in English; keep ingredient spellings as provided):\n\nVegetables: Tomat, Poatao, Capsicum, Carrot, cabbage, cauliflower, spring onion, red capsicum, yellow capsicum, green zuccini, yellow zuccini, raw papya, staff vegetable, lemon, mint, ginger, garlic\n\nDairy: milk, cream, butter, chaap, matar, egg\n\nNon-Veg: chicken bonless, tandoori chicken, chicken thai, mutton boneless, mutton cut",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-for-each-ingredient-row-collect-a-unit-of-measurement-b-closing-balance-for-the-day-and-c-order-quantity-for-the-next-day",
+      "title": "For each ingredient row, collect (a) unit of measurement, (b) closing balance for the day, and (c) order quantity for the next day.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-simple-history-view-to-browse-previously-saved-daily-records-and-open-a-record-to-review-what-was-submitted-for-that-day",
+      "title": "Add a simple history view to browse previously saved daily records and open a record to review what was submitted for that day.",
+      "reqIds": [
+        "REQ-5"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-an-in-app-export-option-to-download-saved-daily-record-data-as-a-csv-file-for-manual-upload-to-google-drive-google-sheets",
+      "title": "Add an in-app export option to download saved daily record data as a CSV file for manual upload to Google Drive/Google Sheets.",
+      "reqIds": [
+        "REQ-6"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-apply-a-coherent-visual-theme-colors-typography-spacing-and-layout-suitable-for-a-simple-restaurant-inventory-form-and-enforce-it-consistently-across-the-form-and-history-screens-avoid-blue-purple-as-primary-colors",
+      "title": "Apply a coherent visual theme (colors, typography, spacing, and layout) suitable for a simple restaurant inventory form, and enforce it consistently across the form and history screens (avoid blue/purple as primary colors).",
+      "reqIds": [
+        "REQ-7"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-new-predefined-ingredient-named-wings-under-the-non-veg-category-everywhere-the-predefined-ingredient-list-is-defined-seeded-so-it-appears-in-the-daily-entry-form-and-is-available-consistently-across-the-app",
+      "title": "Add a new predefined ingredient named \"wings\" under the \"Non-Veg\" category everywhere the predefined ingredient list is defined/seeded so it appears in the daily entry form and is available consistently across the app.",
+      "reqIds": [
+        "REQ-8"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-saved-record-history-detail-experience-so-each-saved-daily-record-can-be-viewed-in-a-message-friendly-plain-text-format-that-can-be-copied-to-the-clipboard-for-sending-to-a-vendor-e-g-via-whatsapp-sms",
+      "title": "Update the saved record history/detail experience so each saved daily record can be viewed in a message-friendly plain-text format that can be copied to the clipboard for sending to a vendor (e.g., via WhatsApp/SMS).",
+      "reqIds": [
+        "REQ-9"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-new-predefined-ingredient-named-dahi-under-the-dairy-category-everywhere-the-predefined-ingredient-list-is-defined-seeded-so-it-appears-consistently-in-the-daily-entry-form-history-and-record-details",
+      "title": "Add a new predefined ingredient named \"Dahi\" under the \"Dairy\" category everywhere the predefined ingredient list is defined/seeded so it appears consistently in the daily entry form, history, and record details.",
+      "reqIds": [
+        "REQ-10"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-required-balance-date-selection-step-before-saving-a-daily-record-so-the-user-can-explicitly-choose-the-date-for-which-the-closing-balance-order-applies-store-and-display-this-chosen-date-as-the-record-date-throughout-the-app",
+      "title": "Add a required \"Balance Date\" selection step before saving a daily record, so the user can explicitly choose the date for which the closing balance/order applies; store and display this chosen date as the record date throughout the app.",
+      "reqIds": [
+        "REQ-11"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-make-all-ingredient-input-fields-non-mandatory-when-saving-treat-any-missing-numeric-inputs-as-0-meaning-no-balance-no-requirement-and-do-not-block-saving-due-to-partially-filled-rows-ensure-saved-records-and-copy-export-outputs-reflect-these-defaults",
+      "title": "Make all ingredient input fields non-mandatory: when saving, treat any missing numeric inputs as 0 (meaning no balance / no requirement) and do not block saving due to partially filled rows; ensure saved records and copy/export outputs reflect these defaults.",
+      "reqIds": [
+        "REQ-12"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-dedicated-button-to-copy-the-daily-record-data-in-a-vendor-friendly-message-format-suitable-for-sending-via-messaging-apps-place-this-button-in-the-daily-entry-experience-so-the-user-can-copy-the-formatted-text-for-the-selected-balance-date",
+      "title": "Add a dedicated button to copy the daily record data in a vendor-friendly message format suitable for sending via messaging apps; place this button in the Daily Entry experience so the user can copy the formatted text for the selected Balance Date.",
+      "reqIds": [
+        "REQ-13"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-generate-a-custom-app-icon-consisting-of-a-solid-yellow-circle-with-the-word-balance-centered-inside-it-using-a-clean-bold-highly-legible-typographic-style-and-good-contrast-for-small-sizes",
+      "title": "Generate a custom app icon consisting of a solid yellow circle with the word \"Balance\" centered inside it, using a clean, bold, highly legible typographic style and good contrast for small sizes.",
+      "reqIds": [
+        "REQ-14"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-the-generated-icon-assets-to-the-frontend-as-static-files-and-update-the-html-head-metadata-to-use-them-as-the-site-favicon-app-icon",
+      "title": "Add the generated icon assets to the frontend as static files and update the HTML head metadata to use them as the site favicon/app icon.",
+      "reqIds": [
+        "REQ-15"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-the-daily-inventory-entry-table-reduce-the-input-box-width-by-65-i-e-to-35-of-its-current-visual-width-for-both-numeric-fields-closing-balance-and-next-day-order-apply-this-consistently-across-all-ingredient-rows-and-all-categories-without-changing-validation-or-saved-values",
+      "title": "In the Daily Inventory Entry table, reduce the input box width by 65% (i.e., to ~35% of its current visual width) for both numeric fields: \"Closing Balance\" and \"Next Day Order\". Apply this consistently across all ingredient rows and all categories, without changing validation or saved values.",
+      "reqIds": [
+        "REQ-16"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-the-daily-inventory-entry-table-on-the-daily-entry-page-reduce-the-visual-width-of-the-per-row-unit-input-box-by-70-i-e-to-30-of-its-current-visual-width-across-all-ingredient-rows-and-all-categories-without-changing-any-validation-placeholders-or-saved-values",
+      "title": "In the Daily Inventory Entry table on the Daily Entry page, reduce the visual width of the per-row \"Unit\" input box by 70% (i.e., to ~30% of its current visual width) across all ingredient rows and all categories, without changing any validation, placeholders, or saved values.",
+      "reqIds": [
+        "REQ-17"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-on-the-daily-entry-page-ingredient-table-increase-the-font-size-of-the-ingredient-name-text-in-each-row-to-match-the-table-header-text-size-and-make-the-ingredient-names-bold",
+      "title": "On the Daily Entry page ingredient table, increase the font size of the ingredient name text in each row to match the table header text size and make the ingredient names bold.",
+      "reqIds": [
+        "REQ-18"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-identify-and-fix-the-root-cause-of-the-production-deployment-failure-currently-shown-as-a-generic-deployment-error-so-that-the-application-can-be-successfully-deployed-to-production-live",
+      "title": "Identify and fix the root cause of the production deployment failure (currently shown as a generic \"Deployment error\") so that the application can be successfully deployed to production (live).",
+      "reqIds": [
+        "REQ-19"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-resolve-the-known-production-runtime-connectivity-issue-where-the-frontend-may-fail-to-reach-the-backend-e-g-canister-id-not-resolved-by-ensuring-the-frontend-actor-configuration-resolves-the-correct-backend-canister-id-in-production-and-fails-gracefully-when-it-cannot-create-an-actor",
+      "title": "Resolve the known production runtime connectivity issue where the frontend may fail to reach the backend (e.g., \"Canister Id not resolved\") by ensuring the frontend actor configuration resolves the correct backend canister ID in production and fails gracefully when it cannot create an actor.",
+      "reqIds": [
+        "REQ-20"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-after-applying-the-fixes-trigger-a-new-production-deployment-and-verify-end-to-end-that-the-live-app-can-save-a-daily-record-and-view-it-in-history-record-details",
+      "title": "After applying the fixes, trigger a new production deployment and verify end-to-end that the live app can save a daily record and view it in History/Record Details.",
+      "reqIds": [
+        "REQ-21"
+      ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Create ingredient entry form with predefined ingredient names grouped under three heads: Vegetables, Dairy, Non-Veg",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Capture restaurant daily closing balance and next-day order quantities for each ingredient in a column/row (table-like) format including unit of measurement",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Persist recorded inventory/order data inside the app (since Google Drive/Google Sheets integration is not supported)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-7",
+      "summary": "Persist each submitted daily record in the Motoko backend so that data remains available after refresh/reload.",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-8",
+      "summary": "Add a new ingredient \"wings\" under the Non-Veg category in the predefined ingredient list.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-9",
+      "summary": "Update record history view to present saved daily records in a copyable, message-friendly text format suitable for sending to a vendor (e.g., via chat/message).",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-10",
+      "summary": "Add a new predefined ingredient \"Dahi\" under the Dairy category everywhere the ingredient list is seeded/defined.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-11",
+      "summary": "Add a balance date field/prompt before saving each daily record so the user can select the date for that record.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-12",
+      "summary": "Make all ingredient input fields non-mandatory; treat empty inputs as 0 (no balance / no requirement) when saving.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-13",
+      "summary": "Add a dedicated one-tap button to copy the saved daily record in a vendor message-friendly format to the clipboard.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-14",
+      "summary": "Create a custom app icon: yellow circle with the word \"Balance\" written in the center.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-15",
+      "summary": "Reduce the input box width by 65% for both the \"Closing Balance\" and \"Next Day Order\" fields in the ingredient entry form.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-16",
+      "summary": "Reduce the Unit input box width by 70% in the ingredient entry form.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-17",
+      "summary": "Increase the font size of ingredient names to match header size and make ingredient text bold in the entry form.",
+      "reqIds": [],
+      "status": "pending"
+    }
+  ],
+  "gameProjectType": "none",
+  "projectName": "Restaurant daily closing balance & next-day order form with predefined ingredients",
+  "clarification_mode": "instant",
+  "clarification_rounds": 0
+}

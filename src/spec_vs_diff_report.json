@@ -1,0 +1,71 @@
+{
+  "kind": "spec_vs_diff_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-12T15:31:39.637Z",
+  "summary": "Diff adds frontend UI for graceful backend-connection failures (error card + retry) and adjusts query hooks to throw when actor is missing. However, the diff does not show an explicit fix for the production deployment failure root cause or any build/deploy logging, and it does not provide clear evidence of production canister-ID resolution changes. It also appears to introduce an unrequested change to predefined ingredient data (adding “Dahi”).",
+  "missing_requirements": [
+    {
+      "id": "REQ-19",
+      "requirement": "Identify and fix the root cause of the production deployment failure (generic \"Deployment error\") and capture a brief developer-readable explanation in build/deploy logs/output (not shown to end users).",
+      "reason": "The diff shows code changes but no evidence of (a) identifying the deployment root cause, (b) fixing a deploy-time failure mode, or (c) adding developer-readable build/deploy logging/output explaining the original failure.",
+      "evidence": [
+        "backend/main.mo",
+        "frontend/src/App.tsx",
+        "frontend-file-summaries.txt"
+      ]
+    },
+    {
+      "id": "REQ-20",
+      "requirement": "Ensure frontend actor configuration resolves the correct backend canister ID in production (avoiding \"Canister Id not resolved\") and fails gracefully with a clear English error state + retry, without editing immutable hook files.",
+      "reason": "Graceful error UI and retry are implemented outside immutable hook files, but the diff summary does not show any change that specifically ensures correct production canister ID resolution (e.g., environment-based canister ID wiring).",
+      "evidence": [
+        "frontend/src/hooks/useActorDiagnostics.ts",
+        "frontend/src/components/BackendConnectionErrorCard.tsx",
+        "frontend/src/pages/DailyEntryPage.tsx",
+        "frontend/src/pages/HistoryPage.tsx",
+        "frontend/src/pages/RecordDetailPage.tsx",
+        "frontend/src/hooks/useQueries.ts"
+      ]
+    },
+    {
+      "id": "REQ-21",
+      "requirement": "Trigger a new production deployment and verify end-to-end on live app that saving a daily record and viewing it in History/Record Details works, and copy/export actions have no regressions.",
+      "reason": "Deployment triggering and live end-to-end verification are not evidenced in the code diff summary; only code changes are shown.",
+      "evidence": [
+        "frontend/src/pages/DailyEntryPage.tsx",
+        "frontend/src/pages/HistoryPage.tsx",
+        "frontend/src/pages/RecordDetailPage.tsx"
+      ]
+    }
+  ],
+  "hallucinated_features": [
+    {
+      "description": "Added a new predefined ingredient \"Dahi\" (Dairy).",
+      "reason": "The BuildRequest explicitly lists deployment/connectivity fixes as goals and states changing predefined ingredient lists is a non-goal unless required for the deployment/runtime issue; adding a new ingredient is not requested by REQ-19/20/21.",
+      "evidence": [
+        "backend/main.mo",
+        "frontend-file-summaries.txt"
+      ]
+    },
+    {
+      "description": "Relaxed form validation/behavior (defaults blank numeric inputs to 0, allows partially filled rows, skips invalid entries).",
+      "reason": "Not requested by REQ-19/20/21 and may violate the non-goal of changing form behavior unless required for the deployment/runtime issue; diff summary claims this change but it is unrelated to deployment/connectivity.",
+      "evidence": [
+        "frontend-file-summaries.txt"
+      ]
+    }
+  ],
+  "confidence": 0.66,
+  "changed_files": [
+    "backend/main.mo",
+    "frontend-file-summaries.txt",
+    "frontend/src/App.tsx",
+    "frontend/src/components/BackendConnectionErrorCard.tsx",
+    "frontend/src/hooks/useActorDiagnostics.ts",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/pages/DailyEntryPage.tsx",
+    "frontend/src/pages/HistoryPage.tsx",
+    "frontend/src/pages/RecordDetailPage.tsx",
+    "project_state.json"
+  ]
+}

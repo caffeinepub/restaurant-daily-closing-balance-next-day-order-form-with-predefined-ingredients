@@ -1,0 +1,84 @@
+{
+  "kind": "build_request",
+  "title": "Fix production deployment error and redeploy live version",
+  "priority": "high",
+  "requirements": [
+    {
+      "id": "REQ-19",
+      "text": "Identify and fix the root cause of the production deployment failure (currently shown as a generic \"Deployment error\") so that the application can be successfully deployed to production (live).",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "kindly fix the error and try to deploying again"
+        ]
+      },
+      "acceptanceCriteria": [
+        "A production deployment completes successfully without errors.",
+        "The live (production) app reflects the latest draft changes after deployment.",
+        "A brief, developer-readable explanation of the original failure cause is captured in logs/output during the build/deploy process (not shown to end users)."
+      ]
+    },
+    {
+      "id": "REQ-20",
+      "text": "Resolve the known production runtime connectivity issue where the frontend may fail to reach the backend (e.g., \"Canister Id not resolved\") by ensuring the frontend actor configuration resolves the correct backend canister ID in production and fails gracefully when it cannot create an actor.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "kindly fix the error and try to deploying again"
+        ]
+      },
+      "acceptanceCriteria": [
+        "In production, the frontend can initialize an actor and successfully call backend methods (e.g., fetch history) without \"Canister Id not resolved\" errors under normal conditions.",
+        "If actor creation or the first backend call fails, the UI shows a clear English error state with a retry action (and does not crash/blank screen).",
+        "No changes are made to immutable hook files listed in SYSTEM_CONTEXT; any needed error handling is implemented outside those immutable paths."
+      ]
+    },
+    {
+      "id": "REQ-21",
+      "text": "After applying the fixes, trigger a new production deployment and verify end-to-end that the live app can save a daily record and view it in History/Record Details.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "kindly fix the error and try to deploying again"
+        ]
+      },
+      "acceptanceCriteria": [
+        "On the live app, a user can save a daily record for a chosen Balance Date and see it in the History list.",
+        "Opening the saved record in Record Details works and displays the expected entries.",
+        "Copy/export actions on the live app function as before (no regressions)."
+      ]
+    }
+  ],
+  "constraints": [
+    "Backend must remain a single Motoko actor in backend/main.mo (no additional backend services).",
+    "Do not edit files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or any files in frontend/src/components/ui; compose around them instead.",
+    "Use English for any user-facing text."
+  ],
+  "nonGoals": [
+    "Adding new product features unrelated to deployment stability.",
+    "Changing predefined ingredient lists, form fields, or record formatting unless required to fix the deployment/runtime issue."
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  },
+  "userProfileUpdate": {
+    "goalsToAdd": [],
+    "goalsToRemove": [],
+    "preferencesToAdd": [],
+    "preferencesToRemove": [],
+    "miscToAdd": [],
+    "miscToRemove": [],
+    "fieldsToSet": {},
+    "fieldsToDelete": []
+  }
+}
