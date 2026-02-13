@@ -7,7 +7,6 @@ import type { IngredientEntryData, SavedDailyRecord } from '../types/dailyForm';
 function encodeIngredientEntry(entry: IngredientEntryData): Meal {
   return {
     name: JSON.stringify({
-      unit: entry.unit,
       closingBalance: entry.closingBalance,
       nextDayOrder: entry.nextDayOrder,
     }),
@@ -27,7 +26,6 @@ function decodeDailyRecord(record: DailyRecord): SavedDailyRecord {
     return {
       name: meal.ingredients[0].name,
       category: meal.ingredients[0].category,
-      unit: data.unit || '',
       closingBalance: data.closingBalance || 0,
       nextDayOrder: data.nextDayOrder || 0,
     };
@@ -36,6 +34,7 @@ function decodeDailyRecord(record: DailyRecord): SavedDailyRecord {
   return {
     entries,
     timestamp: record.timestamp,
+    restaurantName: record.restaurantName || 'Andaaz',
   };
 }
 
@@ -62,12 +61,12 @@ export function useAddDailyRecord() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (payload: { entries: IngredientEntryData[]; timestamp: bigint }) => {
+    mutationFn: async (payload: { entries: IngredientEntryData[]; timestamp: bigint; restaurantName: string }) => {
       if (!actor) throw new Error('Backend connection not available. Please check your connection and try again.');
 
       const meals = payload.entries.map(encodeIngredientEntry);
 
-      return await actor.addDailyRecord(meals, payload.timestamp);
+      return await actor.addDailyRecord(meals, payload.timestamp, payload.restaurantName);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dailyRecords'] });

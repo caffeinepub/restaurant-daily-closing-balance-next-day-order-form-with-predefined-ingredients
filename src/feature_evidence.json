@@ -2,61 +2,41 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-publish-the-latest-build-version-11-to-production-so-the-end-user-facing-live-app-is-updated",
-      "featureTitle": "Publish the latest build (Version 11) to production so the end-user-facing live app is updated.",
+      "featureId": "feature-fix-the-infinite-update-loop-that-triggers-minified-react-error-185-maximum-update-depth-exceeded-on-the-daily-entry-page-in-the-draft-preview-so-the-daily-entry-page-renders-normally-without-showing-the-generic-something-went-wrong-error",
+      "featureTitle": "Fix the infinite update loop that triggers “Minified React error #185 / Maximum update depth exceeded” on the Daily Entry page in the draft preview, so the Daily Entry page renders normally without showing the generic “Something went wrong” error.",
       "files": [
         "frontend/PRODUCTION_SMOKE_TEST.md",
-        "frontend/src/components/AppLayout.tsx",
-        "frontend/src/components/BackendConnectionErrorCard.tsx"
+        "frontend/src/hooks/useActorDiagnostics.ts"
       ],
       "components": [
         "core-infrastructure@1.0.2",
         "shadcn-ui@1.0.0",
         "build-template-react@1.0.0",
         "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
+        "github-export-icp-cli@1.0.0",
+        "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-29"
+        "REQ-43"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-after-publishing-version-11-verify-the-production-site-against-the-checklist-in-frontend-production-smoke-test-md-including-that-the-daily-entry-page-action-buttons-clear-form-copy-for-vendor-save-record-are-enabled-and-functional",
-      "featureTitle": "After publishing Version 11, verify the production site against the checklist in frontend/PRODUCTION_SMOKE_TEST.md, including that the Daily Entry page action buttons (Clear Form, Copy for Vendor, Save Record) are enabled and functional.",
+      "featureId": "feature-ensure-any-reactive-backend-connection-actor-readiness-ui-state-used-by-the-daily-entry-page-does-not-continuously-set-react-state-when-there-is-no-effective-change-e-g-avoid-repeatedly-writing-the-same-readiness-values-to-state-preventing-future-maximum-update-depth-regressions",
+      "featureTitle": "Ensure any reactive backend-connection/actor readiness UI state used by the Daily Entry page does not continuously set React state when there is no effective change (e.g., avoid repeatedly writing the same readiness values to state), preventing future maximum update depth regressions.",
       "files": [
-        "frontend/PRODUCTION_SMOKE_TEST.md",
-        "frontend/src/pages/DailyEntryPage.tsx",
-        "frontend/src/pages/HistoryPage.tsx",
-        "frontend/src/pages/RecordDetailPage.tsx"
+        "frontend/src/hooks/useActorDiagnostics.ts"
       ],
       "components": [
         "core-infrastructure@1.0.2",
         "shadcn-ui@1.0.0",
         "build-template-react@1.0.0",
         "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
+        "github-export-icp-cli@1.0.0",
+        "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-30"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-if-the-production-frontend-url-changes-as-a-result-of-publishing-version-11-update-frontend-live-url-md-to-contain-the-correct-live-production-app-url-that-end-users-should-open-in-a-browser",
-      "featureTitle": "If the production frontend URL changes as a result of publishing Version 11, update frontend/LIVE_URL.md to contain the correct live (production) app URL that end users should open in a browser.",
-      "files": [
-        "frontend/LIVE_URL.md"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-31"
+        "REQ-44"
       ],
       "confidence": "high"
     }

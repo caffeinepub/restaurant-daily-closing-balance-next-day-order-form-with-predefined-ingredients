@@ -1,62 +1,49 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-12T16:40:48.670Z",
-  "summary": "Diff updates several frontend pages/components (adds Version 11 label, improves backend connection error UI, changes navigation to use timestamp IDs), updates LIVE_URL.md, and modifies backend/main.mo significantly (data model, ingredient/category lists, and new category filtering). There is no evidence of an actual production deployment trigger/completion or of post-deploy verification being performed.",
+  "generatedAt": "2026-02-13T10:41:54.388Z",
+  "summary": "The diff adds a new React hook (useActorDiagnostics) that computes actor readiness/loading/error from the React Query cache with change-detection guards to avoid redundant state updates, plus documentation/state summary updates. However, there is no evidence in the provided diff summary that the Daily Entry page (or its draft preview) was updated to use this hook or otherwise fix the specific infinite update loop causing React error #185.",
   "missing_requirements": [
     {
-      "id": "REQ-29",
-      "requirement": "Publish the latest build (Version 11) to production so the end-user-facing live app is updated, and confirm the production frontend loads without backend connectivity error.",
-      "reason": "The diff only shows code/documentation changes; it does not include any deployment configuration, CI/CD trigger, release artifact, or other evidence that a production deployment was executed and completed successfully or that the live app was confirmed to load without connectivity errors.",
+      "id": "REQ-43",
+      "requirement": "Fix the infinite update loop that triggers “Minified React error #185 / Maximum update depth exceeded” on the Daily Entry page in the draft preview so the page renders normally without the root-route “Something went wrong” fallback.",
+      "reason": "The diff summary shows no modifications to the Daily Entry page component(s) or draft preview code path where the render loop occurs—only a new helper hook was added. Without evidence of integrating the fix into the Daily Entry page or removing the loop source, this requirement is not demonstrably implemented.",
       "evidence": [
-        "file-diff summary: only source/documentation files modified; no deployment-related files shown"
+        "frontend/src/hooks/useActorDiagnostics.ts (only code change shown; no DailyEntryPage change evidenced)",
+        "frontend-file-summaries.txt (is a summary file, not evidence of actual page code changes in this diff)"
       ]
     },
     {
-      "id": "REQ-30",
-      "requirement": "After publishing Version 11, verify the production site against frontend/PRODUCTION_SMOKE_TEST.md (Daily Entry buttons enabled and functional; Clear Form resets Balance Date; Copy for Vendor validation and copy; Save Record persists and appears in History and opens in Record Details).",
-      "reason": "While the checklist file exists/was modified (truncated view) and related UI logic appears implemented, the diff contains no evidence of performing or recording the production verification itself (no test run output, sign-off, or results).",
+      "id": "REQ-44",
+      "requirement": "Ensure reactive backend-connection/actor readiness UI state used by the Daily Entry page does not continuously set React state when there is no effective change, preventing maximum update depth regressions.",
+      "reason": "While the new hook includes guards to avoid setting state when values are unchanged, the diff summary does not show that the Daily Entry page (or any readiness UI used by it) was updated to use this hook or otherwise apply the guarded update logic. Therefore the requirement is only partially addressed at best, with no demonstrated wiring into the Daily Entry page.",
       "evidence": [
-        "frontend/PRODUCTION_SMOKE_TEST.md",
-        "file-diff summary: no verification artifacts/logs included"
+        "frontend/src/hooks/useActorDiagnostics.ts (guarded diagnostics state updates implemented)",
+        "No diff evidence for frontend/src/pages/DailyEntryPage.tsx integration"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Backend changes the predefined category set beyond the three defined categories (adds e.g., \"Spices\" and \"Beverages\") and adds a getCategoriesByType API.",
-      "reason": "BuildRequest explicitly lists as a non-goal: changing the predefined ingredient list, categories, or record format as part of this publish step. Adding new categories and a new category-filtering API is a product change not requested for publishing Version 11.",
+      "description": "Added a 'retry' function that invalidates all React Query 'actor' queries.",
+      "reason": "REQ-44 requests preventing continuous state updates and ensuring readiness indicators update once per state change; it does not explicitly request adding a retry API. This may be useful, but it is an extra behavior beyond the stated requirements.",
       "evidence": [
-        "backend/main.mo (getCategoriesByType defines allCategories including \"Spices\" and \"Beverages\")"
+        "frontend/src/hooks/useActorDiagnostics.ts (retry() invalidates actor queries)"
       ]
     },
     {
-      "description": "Backend modifies the predefined ingredient list (e.g., adds \"Dahi\").",
-      "reason": "Non-goal prohibits changing the predefined ingredient list as part of the publish step; the diff shows ingredient list changes in backend/main.mo.",
+      "description": "Added/updated a production smoke test checklist document including steps for 'Clear Form' and 'Copy for Vendor'.",
+      "reason": "The BuildRequest focuses on fixing a React crash and avoiding readiness state loops; adding a production smoke test document (and steps for features not mentioned in the request) is not requested by REQ-43/REQ-44.",
       "evidence": [
-        "backend/main.mo (ingredients array includes \"Dahi\")"
-      ]
-    },
-    {
-      "description": "Backend appears to change the daily record data model/record format (introduces Meal/Ingredient/DailyRecord with meals/timestamp) which may diverge from the existing frontend 'entries' based record structure.",
-      "reason": "Non-goal prohibits changing the record format as part of this publish step; the backend diff shows a different DailyRecord structure (meals/timestamp) and addDailyRecord signature that does not match the frontend usage shown in the diff summary (which passes 'entries').",
-      "evidence": [
-        "backend/main.mo (type DailyRecord = { meals : [Meal]; timestamp : Timestamp; }, addDailyRecord(meals, timestamp))",
-        "frontend/src/pages/DailyEntryPage.tsx (calls addRecord.mutateAsync({ entries, timestamp }))"
+        "frontend/PRODUCTION_SMOKE_TEST.md"
       ]
     }
   ],
-  "confidence": 0.74,
+  "confidence": 0.62,
   "changed_files": [
-    "backend/main.mo",
     "frontend-file-summaries.txt",
-    "frontend/LIVE_URL.md",
     "frontend/PRODUCTION_SMOKE_TEST.md",
-    "frontend/src/components/AppLayout.tsx",
-    "frontend/src/components/BackendConnectionErrorCard.tsx",
-    "frontend/src/pages/DailyEntryPage.tsx",
-    "frontend/src/pages/HistoryPage.tsx",
-    "frontend/src/pages/RecordDetailPage.tsx",
+    "frontend/src/hooks/useActorDiagnostics.ts",
     "project_state.json"
   ]
 }

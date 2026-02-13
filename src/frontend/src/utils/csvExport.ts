@@ -1,12 +1,11 @@
 import type { SavedDailyRecord } from '../types/dailyForm';
 
 export function exportRecordToCSV(record: SavedDailyRecord): void {
-  const headers = ['Category', 'Ingredient', 'Unit', 'Closing Balance', 'Next Day Order'];
+  const headers = ['Category', 'Ingredient', 'Balance', 'Order'];
   
   const rows = record.entries.map((entry) => [
     entry.category,
     entry.name,
-    entry.unit,
     entry.closingBalance.toString(),
     entry.nextDayOrder.toString(),
   ]);

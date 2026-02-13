@@ -19,22 +19,47 @@ export const Meal = IDL.Record({
 });
 export const Timestamp = IDL.Nat;
 export const DailyRecordId = IDL.Nat;
+export const UserRole = IDL.Variant({
+  'admin' : IDL.Null,
+  'user' : IDL.Null,
+  'guest' : IDL.Null,
+});
 export const Category = IDL.Record({ 'name' : CategoryName });
 export const DailyRecord = IDL.Record({
   'meals' : IDL.Vec(Meal),
+  'restaurantName' : IDL.Text,
   'timestamp' : Timestamp,
+});
+export const UserProfile = IDL.Record({
+  'name' : IDL.Text,
+  'restaurantName' : IDL.Text,
 });
 
 export const idlService = IDL.Service({
-  'addDailyRecord' : IDL.Func([IDL.Vec(Meal), Timestamp], [DailyRecordId], []),
+  '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+  'addDailyRecord' : IDL.Func(
+      [IDL.Vec(Meal), Timestamp, IDL.Text],
+      [DailyRecordId],
+      [],
+    ),
+  'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'getAllCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
   'getAllDailyRecords' : IDL.Func([], [IDL.Vec(DailyRecord)], ['query']),
+  'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+  'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getCategoriesByType' : IDL.Func([IDL.Text], [IDL.Vec(Category)], ['query']),
   'getIngredientsByCategory' : IDL.Func(
       [CategoryName],
       [IDL.Vec(Ingredient)],
       ['query'],
     ),
+  'getUserProfile' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Opt(UserProfile)],
+      ['query'],
+    ),
+  'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
 });
 
 export const idlInitArgs = [];
@@ -51,20 +76,34 @@ export const idlFactory = ({ IDL }) => {
   });
   const Timestamp = IDL.Nat;
   const DailyRecordId = IDL.Nat;
+  const UserRole = IDL.Variant({
+    'admin' : IDL.Null,
+    'user' : IDL.Null,
+    'guest' : IDL.Null,
+  });
   const Category = IDL.Record({ 'name' : CategoryName });
   const DailyRecord = IDL.Record({
     'meals' : IDL.Vec(Meal),
+    'restaurantName' : IDL.Text,
     'timestamp' : Timestamp,
+  });
+  const UserProfile = IDL.Record({
+    'name' : IDL.Text,
+    'restaurantName' : IDL.Text,
   });
   
   return IDL.Service({
+    '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'addDailyRecord' : IDL.Func(
-        [IDL.Vec(Meal), Timestamp],
+        [IDL.Vec(Meal), Timestamp, IDL.Text],
         [DailyRecordId],
         [],
       ),
+    'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'getAllCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
     'getAllDailyRecords' : IDL.Func([], [IDL.Vec(DailyRecord)], ['query']),
+    'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+    'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getCategoriesByType' : IDL.Func(
         [IDL.Text],
         [IDL.Vec(Category)],
@@ -75,6 +114,13 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(Ingredient)],
         ['query'],
       ),
+    'getUserProfile' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Opt(UserProfile)],
+        ['query'],
+      ),
+    'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   });
 };
 

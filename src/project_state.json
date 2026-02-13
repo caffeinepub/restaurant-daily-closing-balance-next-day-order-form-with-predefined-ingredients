@@ -1,16 +1,20 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 25,
-  "summary": "Build a simple restaurant inventory/order app with a form containing predefined ingredients grouped under Veg, Dairy, and Non-Veg (including \"wings\"), to record daily closing balance and next-day orders (with units) for a selected balance date, storing data persistently in-app (Google Drive/Sheets integration not supported), supporting non-mandatory inputs that default to 0 when left blank, and providing history records plus a one-tap copy-to-clipboard message format suitable for sending to a vendor via messaging.",
+  "projectStateVersion": 31,
+  "summary": "Update the restaurant inventory/order app to include a Restaurant Name selection (Andaaz, Kai wok Express) before Balance Date; adjust date input UI/format (50% narrower, dd/mm/yyyy); expand predefined ingredients (Beans, Green Chilli, Coriander, Onion under Vegetables; Paneer under Dairy); revise the entry table to remove the Unit column and style ingredient names per provided PNG with +20% font size; update actions so Clear is removed and Copy is moved to History with copy output including only non-zero Order items (excluding Balance values), while History continues to show all ingredients with Balance and Order; rename column headers to Balance and Order.",
   "architectural_notes": [
     "Google Drive/Google Sheets integration is not supported; use in-app persistent storage instead.",
     "User confirmed to proceed with publishing the latest successful build to production (production deployment/publish approved).",
-    "User approved publishing Version 11 to production for live testing (publish/deploy requested)."
+    "User approved publishing Version 11 to production for live testing (publish/deploy requested).",
+    "Ingredient name rendering must follow the style shown in the user-provided PNG for the Daily Entry table.",
+    "Vendor copy output must exclude Balance values and include only items with non-zero Order; Copy action is located in History (not Daily Entry)."
   ],
   "known_issues": [
     "Users may encounter \"Canister Id not resolved\" when the frontend cannot reach the backend canister (deployment/network resolution issue).",
     "Production deployment failed with a generic \"Deployment error\"; app changes are not live until a successful production deploy.",
-    "On the working app URL (https://devenderraje-mh2.caffeine.xyz), the Daily Entry actions are not functioning: Save Record, Copy, and Clear buttons do nothing."
+    "On the working app URL (https://devenderraje-mh2.caffeine.xyz), the Daily Entry actions are not functioning: Save Record, Copy, and Clear buttons do nothing.",
+    "After \"Version 12\" deployment, the live site may still display \"Version 11\" in the UI (likely due to cached frontend assets or the UI version label not being updated in the build).",
+    "Draft (Version 14) preview shows \"Something went wrong\" / Minified React error #185 (Maximum update depth exceeded) on the Daily Entry page (likely infinite update loop)."
   ],
   "isFixRequest": true,
   "existing_features": [
@@ -253,6 +257,110 @@
         "REQ-31"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-update-the-app-header-version-label-currently-hardcoded-as-version-11-in-frontend-src-components-applayout-tsx-so-it-no-longer-becomes-stale-after-deployments-the-ui-must-display-version-12-for-the-current-release-and-the-version-value-must-be-sourced-from-a-single-configurable-location-not-hardcoded-inside-the-layout-component",
+      "title": "Update the app header version label currently hardcoded as \"Version 11\" in frontend/src/components/AppLayout.tsx so it no longer becomes stale after deployments. The UI must display \"Version 12\" for the current release and the version value must be sourced from a single configurable location (not hardcoded inside the layout component).",
+      "reqIds": [
+        "REQ-32"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-required-restaurant-name-selection-input-before-the-balance-date-on-the-daily-entry-page-with-exactly-two-options-andaaz-and-kai-wok-express",
+      "title": "Add a required \"Restaurant Name\" selection input before the Balance Date on the Daily Entry page, with exactly two options: \"Andaaz\" and \"Kai wok Express\".",
+      "reqIds": [
+        "REQ-33"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-persist-restaurant-name-with-each-saved-daily-record-in-the-motoko-backend-and-display-it-in-history-list-rows-and-in-record-details",
+      "title": "Persist Restaurant Name with each saved daily record in the Motoko backend and display it in History list rows and in Record Details.",
+      "reqIds": [
+        "REQ-34"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-balance-date-ui-so-the-date-input-is-50-narrower-than-its-current-width-and-display-dates-throughout-the-ui-in-dd-mm-yyyy-format-history-list-record-details-header-and-any-copy-plain-text-outputs",
+      "title": "Update the Balance Date UI so the date input is ~50% narrower than its current width, and display dates throughout the UI in dd/mm/yyyy format (History list, Record Details header, and any copy/plain-text outputs).",
+      "reqIds": [
+        "REQ-35"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-predefined-ingredient-list-to-add-these-ingredients-under-vegetables-beans-kg-green-chilli-kg-coriander-kg-onion-kg-and-add-paneer-kg-under-dairy-ensure-these-appear-consistently-across-daily-entry-history-and-record-details",
+      "title": "Update the predefined ingredient list to add these ingredients under \"Vegetables\": \"BEANS/kg\", \"GREEN CHILLI/kg\", \"CORIANDER/kg\", \"ONION/kg\"; and add \"PANEER/kg\" under \"Dairy\". Ensure these appear consistently across Daily Entry, History, and Record Details.",
+      "reqIds": [
+        "REQ-36"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-remove-the-unit-column-from-the-daily-entry-ingredient-table-and-from-record-details-tables-update-the-ingredient-name-rendering-to-match-the-provided-png-style-show-ingredient-name-text-in-the-stored-predefined-format-including-kg-etc-and-increase-ingredient-row-font-size-by-20-versus-current-ingredient-row-text",
+      "title": "Remove the \"Unit\" column from the Daily Entry ingredient table and from Record Details tables. Update the ingredient name rendering to match the provided PNG style: show ingredient name text in the stored/predefined format (including \"/kg\" etc.), and increase ingredient row font size by ~20% versus current ingredient row text.",
+      "reqIds": [
+        "REQ-37"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-rename-table-column-headers-everywhere-they-appear-change-closing-balance-to-balance-and-next-day-order-to-order-daily-entry-and-record-details",
+      "title": "Rename table column headers everywhere they appear: change \"Closing Balance\" to \"Balance\" and \"Next Day Order\" to \"Order\" (Daily Entry and Record Details).",
+      "reqIds": [
+        "REQ-38"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-remove-the-clear-form-button-from-daily-entry-and-move-the-copy-action-to-the-history-experience-record-details-or-history-page-so-users-can-copy-a-saved-record-from-there",
+      "title": "Remove the \"Clear Form\" button from Daily Entry, and move the copy action to the History experience (Record Details or History page) so users can copy a saved record from there.",
+      "reqIds": [
+        "REQ-39"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-change-the-copy-plain-text-output-so-it-only-includes-ingredients-with-a-non-zero-order-value-and-it-must-not-include-balance-values-the-copied-message-must-include-restaurant-name-and-balance-date-dd-mm-yyyy",
+      "title": "Change the copy/plain-text output so it only includes ingredients with a non-zero Order value, and it must not include Balance values. The copied message must include Restaurant Name and Balance Date (dd/mm/yyyy).",
+      "reqIds": [
+        "REQ-40"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-history-record-details-continue-to-show-all-ingredients-saved-in-the-record-with-both-balance-and-order-values-even-when-they-are-0",
+      "title": "Ensure History/Record Details continue to show all ingredients saved in the record with both Balance and Order values (even when they are 0).",
+      "reqIds": [
+        "REQ-41"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-data-encoding-decoding-and-export-output-to-reflect-removal-of-the-unit-column-stop-requiring-unit-input-in-the-ui-and-update-csv-export-headers-rows-to-remove-the-unit-column-while-keeping-balance-and-order-values",
+      "title": "Update data encoding/decoding and export output to reflect removal of the Unit column: stop requiring unit input in the UI, and update CSV export headers/rows to remove the Unit column while keeping Balance and Order values.",
+      "reqIds": [
+        "REQ-42"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-infinite-update-loop-that-triggers-minified-react-error-185-maximum-update-depth-exceeded-on-the-daily-entry-page-in-the-draft-preview-so-the-daily-entry-page-renders-normally-without-showing-the-generic-something-went-wrong-error",
+      "title": "Fix the infinite update loop that triggers “Minified React error #185 / Maximum update depth exceeded” on the Daily Entry page in the draft preview, so the Daily Entry page renders normally without showing the generic “Something went wrong” error.",
+      "reqIds": [
+        "REQ-43"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-any-reactive-backend-connection-actor-readiness-ui-state-used-by-the-daily-entry-page-does-not-continuously-set-react-state-when-there-is-no-effective-change-e-g-avoid-repeatedly-writing-the-same-readiness-values-to-state-preventing-future-maximum-update-depth-regressions",
+      "title": "Ensure any reactive backend-connection/actor readiness UI state used by the Daily Entry page does not continuously set React state when there is no effective change (e.g., avoid repeatedly writing the same readiness values to state), preventing future maximum update depth regressions.",
+      "reqIds": [
+        "REQ-44"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
@@ -351,6 +459,42 @@
     {
       "id": "AR-19",
       "summary": "Provide the live (production) app link after making the latest build live.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-20",
+      "summary": "Add Restaurant Name selection input before Balance Date (options: Andaaz, Kai wok Express).",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-21",
+      "summary": "Update Balance Date UI: reduce date input width by 50% and change date format to dd/mm/yyyy.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-22",
+      "summary": "Add new predefined ingredients: BEANS, GREEN CHILLI, CORIANDER, ONION under Vegetables; PANEER under Dairy (with kg).",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-23",
+      "summary": "Remove the Unit column from the Daily Entry table and style ingredient names as per attached PNG (including +20% ingredient font size).",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-24",
+      "summary": "Remove Clear button; move Copy button to History tab; Copy should include only ingredients with non-zero Order and must not include Balance values; History should show all ingredients with Balance and Order.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-25",
+      "summary": "Rename table column headers: 'Closing Balance' -> 'Balance' and 'Next Day Order' -> 'Order'.",
       "reqIds": [],
       "status": "pending"
     }

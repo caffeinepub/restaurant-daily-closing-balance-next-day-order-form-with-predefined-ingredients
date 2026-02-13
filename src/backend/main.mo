@@ -1,9 +1,17 @@
 import Map "mo:core/Map";
 import Principal "mo:core/Principal";
 import Text "mo:core/Text";
-import Iter "mo:core/Iter";
+import Runtime "mo:core/Runtime";
+
+import AccessControl "authorization/access-control";
+import MixinAuthorization "authorization/MixinAuthorization";
+
 
 actor {
+  // Initialize the access control system
+  let accessControlState = AccessControl.initState();
+  include MixinAuthorization(accessControlState);
+
   type CategoryName = Text;
   type Timestamp = Nat;
   type DailyRecordId = Nat;
@@ -25,16 +33,24 @@ actor {
   type DailyRecord = {
     meals : [Meal];
     timestamp : Timestamp;
+    restaurantName : Text;
   };
 
-  // Predefined ingredients and categories
-  var categories : [Category] = [
+  // User profile type
+  public type UserProfile = {
+    name : Text;
+    restaurantName : Text;
+  };
+
+  // Predefined categories (not persistent)
+  let categories : [Category] = [
     { name = "Vegetables" },
     { name = "Dairy" },
     { name = "Non-Veg" },
   ];
 
-  var ingredients : [Ingredient] = [
+  // Legacy ingredients (not persistent)
+  let legacyIngredients : [Ingredient] = [
     // Vegetables
     { name = "Tomat"; category = "Vegetables" },
     { name = "Poatao"; category = "Vegetables" },
@@ -70,15 +86,56 @@ actor {
     { name = "wings"; category = "Non-Veg" },
   ];
 
+  // New ingredients (not persistent)
+  let newIngredients : [Ingredient] = [
+    // Vegetables
+    { name = "BEANS"; category = "Vegetables" },
+    { name = "GREEN CHILLI"; category = "Vegetables" },
+    { name = "CORIANDER"; category = "Vegetables" },
+    { name = "ONION"; category = "Vegetables" },
+    // Dairy
+    { name = "PANEER"; category = "Dairy" },
+  ];
+
+  let allIngredients = legacyIngredients.concat(newIngredients);
+
   var nextDailyRecordId : Nat = 0;
 
   let users = Map.empty<Principal, [DailyRecord]>();
+  let userProfiles = Map.empty<Principal, UserProfile>();
+
+  // User profile management
+  public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can access profiles");
+    };
+    userProfiles.get(caller);
+  };
+
+  public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
+    if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Can only view your own profile");
+    };
+    userProfiles.get(user);
+  };
+
+  public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can save profiles");
+    };
+    userProfiles.add(caller, profile);
+  };
 
   // Add a daily record
-  public shared ({ caller }) func addDailyRecord(meals : [Meal], timestamp : Timestamp) : async DailyRecordId {
+  public shared ({ caller }) func addDailyRecord(meals : [Meal], timestamp : Timestamp, restaurantName : Text) : async DailyRecordId {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can add daily records");
+    };
+
     let newRecord : DailyRecord = {
       meals;
       timestamp;
+      restaurantName;
     };
 
     switch (users.get(caller)) {
@@ -95,10 +152,17 @@ actor {
   };
 
   public query ({ caller }) func getIngredientsByCategory(category : CategoryName) : async [Ingredient] {
-    ingredients.filter(func(ingredient) { Text.equal(ingredient.category, category) });
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can access ingredients");
+    };
+    allIngredients.filter(func(ingredient) { ingredient.category == category });
   };
 
   public query ({ caller }) func getAllDailyRecords() : async [DailyRecord] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can access daily records");
+    };
+
     switch (users.get(caller)) {
       case (null) { [] };
       case (?records) { records };
@@ -106,11 +170,17 @@ actor {
   };
 
   public query ({ caller }) func getAllCategories() : async [Category] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can access categories");
+    };
     categories;
   };
 
   public query ({ caller }) func getCategoriesByType(categoryType : Text) : async [Category] {
-    //. This function is only implemented in the backend so that it is does not manifest as a frontend error until it is fully connected to the UI.
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can access categories");
+    };
+
     let allCategories = [
       { name = "Vegetables" },
       { name = "Dairy" },
@@ -129,3 +199,4 @@ actor {
     };
   };
 };
+

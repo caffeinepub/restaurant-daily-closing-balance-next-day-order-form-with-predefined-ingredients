@@ -1,74 +1,50 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-12T16:40:48.674Z",
+  "generatedAt": "2026-02-13T10:41:54.391Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 3,
-    "implemented": 3,
+    "total": 2,
+    "implemented": 2,
     "items": [
       {
-        "id": "REQ-29",
-        "summary": "Publish the latest build (Version 11) to production so the end-user-facing live app is updated.",
+        "id": "REQ-43",
+        "summary": "Fix the infinite update loop that triggers “Minified React error #185 / Maximum update depth exceeded” on the Daily Entry page in the draft preview, so the Daily Entry page renders normally without showing the generic “Something went wrong” error.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/AppLayout.tsx",
-          "frontend/src/components/BackendConnectionErrorCard.tsx",
+          "frontend/src/hooks/useActorDiagnostics.ts",
+          "frontend/src/pages/DailyEntryPage.tsx",
           "frontend/PRODUCTION_SMOKE_TEST.md"
         ],
         "matchedFiles": [
-          "frontend/src/components/AppLayout.tsx",
-          "frontend/src/components/BackendConnectionErrorCard.tsx",
+          "frontend/src/hooks/useActorDiagnostics.ts",
           "frontend/PRODUCTION_SMOKE_TEST.md"
         ]
       },
       {
-        "id": "REQ-30",
-        "summary": "After publishing Version 11, verify the production site against the checklist in frontend/PRODUCTION_SMOKE_TEST.md, including that the Daily Entry page action buttons (Clear Form, Copy for Vendor, Save Record) are enabled and functional.",
+        "id": "REQ-44",
+        "summary": "Ensure any reactive backend-connection/actor readiness UI state used by the Daily Entry page does not continuously set React state when there is no effective change (e.g., avoid repeatedly writing the same readiness values to state), preventing future maximum update depth regressions.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/pages/DailyEntryPage.tsx",
-          "frontend/src/pages/HistoryPage.tsx",
-          "frontend/src/pages/RecordDetailPage.tsx",
-          "frontend/src/App.tsx",
-          "frontend/PRODUCTION_SMOKE_TEST.md"
+          "frontend/src/hooks/useActorDiagnostics.ts",
+          "frontend/src/pages/DailyEntryPage.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/pages/DailyEntryPage.tsx",
-          "frontend/src/pages/HistoryPage.tsx",
-          "frontend/src/pages/RecordDetailPage.tsx",
-          "frontend/PRODUCTION_SMOKE_TEST.md"
-        ]
-      },
-      {
-        "id": "REQ-31",
-        "summary": "If the production frontend URL changes as a result of publishing Version 11, update frontend/LIVE_URL.md to contain the correct live (production) app URL that end users should open in a browser.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/LIVE_URL.md"
-        ],
-        "matchedFiles": [
-          "frontend/LIVE_URL.md"
+          "frontend/src/hooks/useActorDiagnostics.ts"
         ]
       }
     ]
   },
   "changedFiles": [
-    "backend/main.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/LIVE_URL.md",
     "frontend/PRODUCTION_SMOKE_TEST.md",
-    "frontend/src/components/AppLayout.tsx",
-    "frontend/src/components/BackendConnectionErrorCard.tsx",
-    "frontend/src/pages/DailyEntryPage.tsx",
-    "frontend/src/pages/HistoryPage.tsx",
-    "frontend/src/pages/RecordDetailPage.tsx",
+    "frontend/src/hooks/useActorDiagnostics.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

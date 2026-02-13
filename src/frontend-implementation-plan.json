@@ -1,82 +1,53 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Version 11 production publish readiness, smoke-test alignment, and live URL update",
+  "title": "Fix Daily Entry draft preview infinite render loop (React error #185 / maximum update depth)",
   "requirements": [
     {
-      "id": "REQ-29",
-      "summary": "Add lightweight production-visible build identification and ensure production connectivity errors are actionable.",
+      "id": "REQ-43",
+      "summary": "Stop the Daily Entry draft preview from entering an infinite render loop so the page renders normally and remains interactive.",
       "acceptanceCriteria": [
-        "A production deployment is triggered for Version 11 and completes successfully (no generic \"Deployment error\").",
-        "The production frontend loads in a browser without showing a backend connectivity error card (e.g., \"Canister Id not resolved\")."
+        "Opening the draft preview and landing on the Daily Entry page does not throw React error #185.",
+        "The app does not display the root-route “Something went wrong” / error fallback when navigating to the Daily Entry page.",
+        "The Daily Entry page remains stable (no repeated re-render loop) while idle (no user interaction) for at least 30 seconds.",
+        "Restaurant Name select, Balance Date input, and ingredient Balance/Order inputs remain interactive and do not cause crashes when edited.",
+        "Save Record button remains clickable (subject to existing validation like required Restaurant Name and Balance Date) and does not trigger an infinite render loop."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/AppLayout.tsx",
+          "path": "frontend/src/hooks/useActorDiagnostics.ts",
           "operation": "modify",
-          "description": "Display a small, non-intrusive \"Version 11\" label in the app chrome (e.g., footer/header) to confirm the live app is updated; keep all user-facing text in English. Verify the component's usage instructions before implementing."
+          "description": "Fix the likely render-loop source by preventing the diagnostics subscription callback from calling setState when computed actor readiness/loading/error values are unchanged; ensure subscription lifecycle is stable and includes a one-time initial sync of diagnostics from the current query cache state."
         },
-        {
-          "path": "frontend/src/components/BackendConnectionErrorCard.tsx",
-          "operation": "modify",
-          "description": "Refine the connection error presentation text to clearly distinguish \"backend not reachable\" vs \"configuration/canister resolution\" and to guide production troubleshooting without exposing secrets; preserve existing UI composition constraints. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/PRODUCTION_SMOKE_TEST.md",
-          "operation": "modify",
-          "description": "Update the checklist to include verifying the visible Version 11 label and reiterate the stop-condition for any backend connectivity error card in production."
-        }
-      ]
-    },
-    {
-      "id": "REQ-30",
-      "summary": "Ensure the production smoke-test checklist behavior is met, including Daily Entry actions being enabled and Save navigating to the saved record details reliably.",
-      "acceptanceCriteria": [
-        "On the production URL, the Daily Entry page finishes loading and the three action buttons are clickable (not disabled/grayed out).",
-        "Clear Form clears entered inputs and resets the Balance Date field.",
-        "Copy for Vendor shows the required validation toast when Balance Date is missing, and successfully copies formatted text when Balance Date is set.",
-        "Save Record successfully saves a record and it appears in History and opens in Record Details."
-      ],
-      "file_operations": [
         {
           "path": "frontend/src/pages/DailyEntryPage.tsx",
           "operation": "modify",
-          "description": "After a successful Save Record, navigate directly to Record Details for the just-saved record using the known Balance Date timestamp as the route param; ensure Clear Form still resets inputs and Balance Date, and Copy for Vendor validation toasts remain unchanged. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/pages/HistoryPage.tsx",
-          "operation": "modify",
-          "description": "Change \"View Details\" navigation to use a stable record identifier (the record timestamp string) rather than the array index so production navigation remains correct after new saves/refetches. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/pages/RecordDetailPage.tsx",
-          "operation": "modify",
-          "description": "Update record lookup to resolve the route param as a timestamp and find the matching record by timestamp instead of treating the param as an index; keep loading/error behavior intact. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/App.tsx",
-          "operation": "modify",
-          "description": "Confirm routing remains correctly wired for /history/$recordId with the updated semantics (recordId now representing a timestamp string) and that navigation links still function. Verify the component's usage instructions before implementing."
+          "description": "Adjust Daily Entry to rely on the stabilized diagnostics state (and avoid any derived-state patterns that could amplify rapid diagnostics updates), ensuring the form, loading UI, retry UI, and save flow render without triggering repeated re-renders."
         },
         {
           "path": "frontend/PRODUCTION_SMOKE_TEST.md",
           "operation": "modify",
-          "description": "Adjust the Save Record verification step to explicitly confirm the app opens the saved record in Record Details after saving, matching the updated timestamp-based navigation."
+          "description": "Add a regression check specific to the Daily Entry draft preview: open Daily Entry, confirm no generic error fallback appears, leave idle for 30 seconds, and verify key inputs remain editable without crashes."
         }
       ]
     },
     {
-      "id": "REQ-31",
-      "summary": "Keep the documented production URL current after Version 11 publish.",
+      "id": "REQ-44",
+      "summary": "Harden the Daily Entry backend-readiness UI state so it only updates React state on meaningful actor readiness changes, preventing future maximum update depth regressions.",
       "acceptanceCriteria": [
-        "frontend/LIVE_URL.md contains the correct current production URL and no longer points to an outdated deployment.",
-        "The URL in frontend/LIVE_URL.md is reachable and loads the production app."
+        "Backend readiness/loading/error indicators on the Daily Entry page do not trigger continuous state updates when the underlying actor query state is unchanged.",
+        "Toggling backend actor states (loading → ready, ready → error via retry, etc.) updates the UI once per state change without creating a render loop."
       ],
       "file_operations": [
         {
-          "path": "frontend/LIVE_URL.md",
+          "path": "frontend/src/hooks/useActorDiagnostics.ts",
           "operation": "modify",
-          "description": "Update the live production URL to the current post-publish URL (only if it changed) and ensure the page still provides correct, English usage guidance for end users."
+          "description": "Implement a change-detection guard (e.g., compare next vs previous readiness/loading/error flags) so repeated react-query cache notifications do not continuously write the same diagnostics values to state; keep retry behavior intact while ensuring updates occur once per actual state change."
+        },
+        {
+          "path": "frontend/src/pages/DailyEntryPage.tsx",
+          "operation": "modify",
+          "description": "Verify the Daily Entry page’s readiness/loading/error UI uses the diagnostics flags in a way that does not introduce extra state writes (e.g., no derived setState loops) and that retry transitions update the UI a single time per change."
         }
       ]
     }

@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /**
  * Non-immutable helper hook that inspects actor query state and provides
@@ -13,9 +13,12 @@ export function useActorDiagnostics() {
     hasActorError: false,
   });
 
+  // Track previous values to prevent unnecessary state updates
+  const prevDiagnosticsRef = useRef(diagnostics);
+
   useEffect(() => {
-    // Subscribe to query cache changes to reactively update diagnostics
-    const unsubscribe = queryClient.getQueryCache().subscribe(() => {
+    // Helper function to compute diagnostics from current query cache state
+    const computeDiagnostics = () => {
       // Find any actor query (with or without identity in the key)
       const queries = queryClient.getQueryCache().findAll({
         predicate: (query) => {
@@ -29,18 +32,44 @@ export function useActorDiagnostics() {
 
       if (actorQuery) {
         const state = actorQuery.state;
-        setDiagnostics({
+        return {
           isActorReady: state.status === 'success' && !!state.data,
           isActorLoading: state.status === 'pending',
           hasActorError: state.status === 'error',
-        });
+        };
       } else {
         // No actor query found yet
-        setDiagnostics({
+        return {
           isActorReady: false,
           isActorLoading: true,
           hasActorError: false,
-        });
+        };
+      }
+    };
+
+    // Initial sync: read current state immediately
+    const initialDiagnostics = computeDiagnostics();
+    if (
+      initialDiagnostics.isActorReady !== prevDiagnosticsRef.current.isActorReady ||
+      initialDiagnostics.isActorLoading !== prevDiagnosticsRef.current.isActorLoading ||
+      initialDiagnostics.hasActorError !== prevDiagnosticsRef.current.hasActorError
+    ) {
+      prevDiagnosticsRef.current = initialDiagnostics;
+      setDiagnostics(initialDiagnostics);
+    }
+
+    // Subscribe to query cache changes to reactively update diagnostics
+    const unsubscribe = queryClient.getQueryCache().subscribe(() => {
+      const nextDiagnostics = computeDiagnostics();
+
+      // Only update state if diagnostics actually changed
+      if (
+        nextDiagnostics.isActorReady !== prevDiagnosticsRef.current.isActorReady ||
+        nextDiagnostics.isActorLoading !== prevDiagnosticsRef.current.isActorLoading ||
+        nextDiagnostics.hasActorError !== prevDiagnosticsRef.current.hasActorError
+      ) {
+        prevDiagnosticsRef.current = nextDiagnostics;
+        setDiagnostics(nextDiagnostics);
       }
     });
 

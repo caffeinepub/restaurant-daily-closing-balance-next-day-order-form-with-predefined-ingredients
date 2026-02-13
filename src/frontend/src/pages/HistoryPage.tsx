@@ -6,6 +6,7 @@ import { ChevronRight, Loader2, FileText } from 'lucide-react';
 import { useGetAllDailyRecords } from '../hooks/useQueries';
 import { useActorDiagnostics } from '../hooks/useActorDiagnostics';
 import BackendConnectionErrorCard from '../components/BackendConnectionErrorCard';
+import { formatDateDDMMYYYY } from '../utils/dateFormat';
 import { useState } from 'react';
 
 export default function HistoryPage() {
@@ -13,15 +14,6 @@ export default function HistoryPage() {
   const { hasActorError, isActorLoading, retry } = useActorDiagnostics();
   const [isRetrying, setIsRetrying] = useState(false);
   const navigate = useNavigate();
-
-  const formatDate = (timestamp: bigint) => {
-    const date = new Date(Number(timestamp));
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
 
   const handleViewRecord = (timestamp: bigint) => {
     navigate({ to: '/history/$recordId', params: { recordId: timestamp.toString() } });
@@ -79,6 +71,7 @@ export default function HistoryPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Restaurant</TableHead>
                     <TableHead>Balance Date</TableHead>
                     <TableHead>Ingredients</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -87,7 +80,8 @@ export default function HistoryPage() {
                 <TableBody>
                   {records.map((record) => (
                     <TableRow key={record.timestamp.toString()}>
-                      <TableCell className="font-medium">{formatDate(record.timestamp)}</TableCell>
+                      <TableCell className="font-medium">{record.restaurantName}</TableCell>
+                      <TableCell className="font-medium">{formatDateDDMMYYYY(record.timestamp)}</TableCell>
                       <TableCell className="text-muted-foreground">
                         {record.entries.length} ingredient{record.entries.length !== 1 ? 's' : ''}
                       </TableCell>

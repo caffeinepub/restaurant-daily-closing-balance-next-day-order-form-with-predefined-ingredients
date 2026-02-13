@@ -7,7 +7,6 @@ export function useDailyForm() {
     PREDEFINED_INGREDIENTS.map((ing) => ({
       name: ing.name,
       category: ing.category,
-      unit: '',
       closingBalance: '',
       nextDayOrder: '',
     }))
@@ -26,7 +25,7 @@ export function useDailyForm() {
 
     for (const item of formData) {
       // Skip completely empty rows
-      if (!item.unit && !item.closingBalance && !item.nextDayOrder) {
+      if (!item.closingBalance && !item.nextDayOrder) {
         continue;
       }
 
@@ -42,7 +41,6 @@ export function useDailyForm() {
       entries.push({
         name: item.name,
         category: item.category,
-        unit: item.unit || '',
         closingBalance,
         nextDayOrder,
       });
@@ -56,7 +54,6 @@ export function useDailyForm() {
       PREDEFINED_INGREDIENTS.map((ing) => ({
         name: ing.name,
         category: ing.category,
-        unit: '',
         closingBalance: '',
         nextDayOrder: '',
       }))

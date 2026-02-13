@@ -8,6 +8,7 @@ import { useGetAllDailyRecords } from '../hooks/useQueries';
 import { useActorDiagnostics } from '../hooks/useActorDiagnostics';
 import { exportRecordToCSV } from '../utils/csvExport';
 import { formatRecordAsPlainText } from '../utils/recordPlainText';
+import { formatDateDDMMYYYY } from '../utils/dateFormat';
 import { CATEGORIES } from '../data/predefinedIngredients';
 import BackendConnectionErrorCard from '../components/BackendConnectionErrorCard';
 import { toast } from 'sonner';
@@ -23,15 +24,6 @@ export default function RecordDetailPage() {
   // Find record by timestamp instead of index
   const recordTimestamp = BigInt(recordId);
   const record = records?.find((r) => r.timestamp === recordTimestamp);
-
-  const formatDate = (timestamp: bigint) => {
-    const date = new Date(Number(timestamp));
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
 
   const handleExport = () => {
     if (!record) return;
@@ -49,7 +41,7 @@ export default function RecordDetailPage() {
     try {
       const plainText = formatRecordAsPlainText(record);
       await navigator.clipboard.writeText(plainText);
-      toast.success('Record copied to clipboard! You can now paste and send it to your vendor.');
+      toast.success('Order details copied to clipboard! You can now paste and send it to your vendor.');
     } catch (error) {
       toast.error('Failed to copy to clipboard');
       console.error('Copy error:', error);
@@ -132,7 +124,9 @@ export default function RecordDetailPage() {
           <div className="flex items-start justify-between">
             <div>
               <CardTitle className="text-2xl">Record Details</CardTitle>
-              <CardDescription>Balance Date: {formatDate(record.timestamp)}</CardDescription>
+              <CardDescription>
+                {record.restaurantName} - Balance Date: {formatDateDDMMYYYY(record.timestamp)}
+              </CardDescription>
             </div>
             <div className="flex gap-2">
               <Button onClick={handleCopy} variant="outline" className="gap-2">
@@ -164,17 +158,15 @@ export default function RecordDetailPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-[200px]">Ingredient</TableHead>
-                          <TableHead className="w-[150px]">Unit</TableHead>
-                          <TableHead className="w-[150px]">Closing Balance</TableHead>
-                          <TableHead className="w-[150px]">Next Day Order</TableHead>
+                          <TableHead className="w-[250px]">Ingredient</TableHead>
+                          <TableHead className="w-[150px]">Balance</TableHead>
+                          <TableHead className="w-[150px]">Order</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {categoryEntries.map((entry, idx) => (
                           <TableRow key={idx}>
-                            <TableCell className="font-medium">{entry.name}</TableCell>
-                            <TableCell>{entry.unit}</TableCell>
+                            <TableCell className="font-semibold text-[1.05rem]">{entry.name}</TableCell>
                             <TableCell>{entry.closingBalance}</TableCell>
                             <TableCell>{entry.nextDayOrder}</TableCell>
                           </TableRow>

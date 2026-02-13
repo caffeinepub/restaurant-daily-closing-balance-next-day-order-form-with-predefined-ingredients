@@ -12,17 +12,35 @@ import type { Principal } from '@icp-sdk/core/principal';
 
 export interface Category { 'name' : CategoryName }
 export type CategoryName = string;
-export interface DailyRecord { 'meals' : Array<Meal>, 'timestamp' : Timestamp }
+export interface DailyRecord {
+  'meals' : Array<Meal>,
+  'restaurantName' : string,
+  'timestamp' : Timestamp,
+}
 export type DailyRecordId = bigint;
 export interface Ingredient { 'name' : string, 'category' : CategoryName }
 export interface Meal { 'name' : string, 'ingredients' : Array<Ingredient> }
 export type Timestamp = bigint;
+export interface UserProfile { 'name' : string, 'restaurantName' : string }
+export type UserRole = { 'admin' : null } |
+  { 'user' : null } |
+  { 'guest' : null };
 export interface _SERVICE {
-  'addDailyRecord' : ActorMethod<[Array<Meal>, Timestamp], DailyRecordId>,
+  '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
+  'addDailyRecord' : ActorMethod<
+    [Array<Meal>, Timestamp, string],
+    DailyRecordId
+  >,
+  'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'getAllCategories' : ActorMethod<[], Array<Category>>,
   'getAllDailyRecords' : ActorMethod<[], Array<DailyRecord>>,
+  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
+  'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getCategoriesByType' : ActorMethod<[string], Array<Category>>,
   'getIngredientsByCategory' : ActorMethod<[CategoryName], Array<Ingredient>>,
+  'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
+  'isCallerAdmin' : ActorMethod<[], boolean>,
+  'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

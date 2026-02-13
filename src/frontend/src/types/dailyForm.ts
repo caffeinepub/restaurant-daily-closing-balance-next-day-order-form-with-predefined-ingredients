@@ -1,7 +1,6 @@
 export interface IngredientFormData {
   name: string;
   category: string;
-  unit: string;
   closingBalance: string;
   nextDayOrder: string;
 }
@@ -13,7 +12,6 @@ export interface DailyFormState {
 export interface IngredientEntryData {
   name: string;
   category: string;
-  unit: string;
   closingBalance: number;
   nextDayOrder: number;
 }
@@ -21,4 +19,5 @@ export interface IngredientEntryData {
 export interface SavedDailyRecord {
   entries: IngredientEntryData[];
   timestamp: bigint;
+  restaurantName: string;
 }

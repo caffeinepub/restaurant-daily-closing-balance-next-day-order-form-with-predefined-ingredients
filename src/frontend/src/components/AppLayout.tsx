@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ClipboardList, History } from 'lucide-react';
 import { SiCoffeescript } from 'react-icons/si';
+import { APP_VERSION } from '@/config/appVersion';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -27,7 +28,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               </div>
             </div>
             <div className="text-xs text-muted-foreground font-mono">
-              Version 11
+              Version {APP_VERSION}
             </div>
           </div>
           <nav className="flex gap-2">
