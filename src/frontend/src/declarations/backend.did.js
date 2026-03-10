@@ -18,7 +18,6 @@ export const Meal = IDL.Record({
   'ingredients' : IDL.Vec(Ingredient),
 });
 export const Timestamp = IDL.Nat;
-export const DailyRecordId = IDL.Nat;
 export const UserRole = IDL.Variant({
   'admin' : IDL.Null,
   'user' : IDL.Null,
@@ -39,7 +38,7 @@ export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'addDailyRecord' : IDL.Func(
       [IDL.Vec(Meal), Timestamp, IDL.Text],
-      [DailyRecordId],
+      [IDL.Nat],
       [],
     ),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
@@ -75,7 +74,6 @@ export const idlFactory = ({ IDL }) => {
     'ingredients' : IDL.Vec(Ingredient),
   });
   const Timestamp = IDL.Nat;
-  const DailyRecordId = IDL.Nat;
   const UserRole = IDL.Variant({
     'admin' : IDL.Null,
     'user' : IDL.Null,
@@ -96,7 +94,7 @@ export const idlFactory = ({ IDL }) => {
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'addDailyRecord' : IDL.Func(
         [IDL.Vec(Meal), Timestamp, IDL.Text],
-        [DailyRecordId],
+        [IDL.Nat],
         [],
       ),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),

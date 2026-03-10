@@ -12,7 +12,6 @@ export interface Meal {
     ingredients: Array<Ingredient>;
 }
 export type Timestamp = bigint;
-export type DailyRecordId = bigint;
 export interface Ingredient {
     name: string;
     category: CategoryName;
@@ -36,7 +35,7 @@ export enum UserRole {
     guest = "guest"
 }
 export interface backendInterface {
-    addDailyRecord(meals: Array<Meal>, timestamp: Timestamp, restaurantName: string): Promise<DailyRecordId>;
+    addDailyRecord(meals: Array<Meal>, timestamp: Timestamp, restaurantName: string): Promise<bigint>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     getAllCategories(): Promise<Array<Category>>;
     getAllDailyRecords(): Promise<Array<DailyRecord>>;

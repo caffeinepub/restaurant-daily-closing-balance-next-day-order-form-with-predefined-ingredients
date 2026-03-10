@@ -1,7 +1,13 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { AlertCircle, RefreshCw } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { AlertCircle, RefreshCw } from "lucide-react";
 
 interface BackendConnectionErrorCardProps {
   onRetry: () => void;
@@ -14,9 +20,10 @@ export default function BackendConnectionErrorCard({
   isRetrying = false,
   errorMessage,
 }: BackendConnectionErrorCardProps) {
-  const isCanisterIdError = errorMessage?.toLowerCase().includes('canister') || 
-                            errorMessage?.toLowerCase().includes('not resolved');
-  
+  const isCanisterIdError =
+    errorMessage?.toLowerCase().includes("canister") ||
+    errorMessage?.toLowerCase().includes("not resolved");
+
   return (
     <Card className="border-destructive/50">
       <CardHeader>
@@ -25,9 +32,9 @@ export default function BackendConnectionErrorCard({
           <CardTitle>Backend Connection Error</CardTitle>
         </div>
         <CardDescription>
-          {isCanisterIdError 
-            ? 'The application cannot connect to the backend service. This typically indicates a deployment configuration issue.'
-            : 'Unable to reach the backend service. This may be due to network connectivity or the service being temporarily unavailable.'}
+          {isCanisterIdError
+            ? "The application cannot connect to the backend service. This typically indicates a deployment configuration issue."
+            : "Unable to reach the backend service. This may be due to network connectivity or the service being temporarily unavailable."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -58,7 +65,10 @@ export default function BackendConnectionErrorCard({
               <li>Refresh your browser page</li>
               <li>Check your internet connection is stable</li>
               {isCanisterIdError && (
-                <li className="text-destructive font-medium">Verify you are using the correct production URL from LIVE_URL.md</li>
+                <li className="text-destructive font-medium">
+                  Verify you are using the correct production URL from
+                  LIVE_URL.md
+                </li>
               )}
               <li>Clear your browser cache and cookies, then reload</li>
               <li>Try the Retry Connection button above</li>
@@ -66,7 +76,8 @@ export default function BackendConnectionErrorCard({
             </ul>
             {isCanisterIdError && (
               <p className="text-destructive text-xs mt-2 font-medium">
-                Note: Canister resolution errors usually indicate the deployment is incomplete or the URL is incorrect.
+                Note: Canister resolution errors usually indicate the deployment
+                is incomplete or the URL is incorrect.
               </p>
             )}
           </div>

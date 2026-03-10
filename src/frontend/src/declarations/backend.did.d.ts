@@ -17,7 +17,6 @@ export interface DailyRecord {
   'restaurantName' : string,
   'timestamp' : Timestamp,
 }
-export type DailyRecordId = bigint;
 export interface Ingredient { 'name' : string, 'category' : CategoryName }
 export interface Meal { 'name' : string, 'ingredients' : Array<Ingredient> }
 export type Timestamp = bigint;
@@ -27,10 +26,7 @@ export type UserRole = { 'admin' : null } |
   { 'guest' : null };
 export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
-  'addDailyRecord' : ActorMethod<
-    [Array<Meal>, Timestamp, string],
-    DailyRecordId
-  >,
+  'addDailyRecord' : ActorMethod<[Array<Meal>, Timestamp, string], bigint>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'getAllCategories' : ActorMethod<[], Array<Category>>,
   'getAllDailyRecords' : ActorMethod<[], Array<DailyRecord>>,

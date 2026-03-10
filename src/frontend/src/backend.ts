@@ -94,7 +94,6 @@ export interface Meal {
     ingredients: Array<Ingredient>;
 }
 export type Timestamp = bigint;
-export type DailyRecordId = bigint;
 export interface Ingredient {
     name: string;
     category: CategoryName;
@@ -119,7 +118,7 @@ export enum UserRole {
 }
 export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
-    addDailyRecord(meals: Array<Meal>, timestamp: Timestamp, restaurantName: string): Promise<DailyRecordId>;
+    addDailyRecord(meals: Array<Meal>, timestamp: Timestamp, restaurantName: string): Promise<bigint>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     getAllCategories(): Promise<Array<Category>>;
     getAllDailyRecords(): Promise<Array<DailyRecord>>;
@@ -148,7 +147,7 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async addDailyRecord(arg0: Array<Meal>, arg1: Timestamp, arg2: string): Promise<DailyRecordId> {
+    async addDailyRecord(arg0: Array<Meal>, arg1: Timestamp, arg2: string): Promise<bigint> {
         if (this.processError) {
             try {
                 const result = await this.actor.addDailyRecord(arg0, arg1, arg2);

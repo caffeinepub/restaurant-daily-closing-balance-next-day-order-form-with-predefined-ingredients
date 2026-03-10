@@ -1,10 +1,17 @@
-import { createRouter, RouterProvider, createRoute, createRootRoute, Outlet, ErrorComponent } from '@tanstack/react-router';
-import { Toaster } from '@/components/ui/sonner';
-import { ThemeProvider } from 'next-themes';
-import AppLayout from './components/AppLayout';
-import DailyEntryPage from './pages/DailyEntryPage';
-import HistoryPage from './pages/HistoryPage';
-import RecordDetailPage from './pages/RecordDetailPage';
+import { Toaster } from "@/components/ui/sonner";
+import {
+  ErrorComponent,
+  Outlet,
+  RouterProvider,
+  createRootRoute,
+  createRoute,
+  createRouter,
+} from "@tanstack/react-router";
+import { ThemeProvider } from "next-themes";
+import AppLayout from "./components/AppLayout";
+import DailyEntryPage from "./pages/DailyEntryPage";
+import HistoryPage from "./pages/HistoryPage";
+import RecordDetailPage from "./pages/RecordDetailPage";
 
 const rootRoute = createRootRoute({
   component: () => (
@@ -13,7 +20,7 @@ const rootRoute = createRootRoute({
     </AppLayout>
   ),
   errorComponent: ({ error }) => {
-    console.error('[App] Root route error:', error);
+    console.error("[App] Root route error:", error);
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="max-w-md w-full">
@@ -26,27 +33,31 @@ const rootRoute = createRootRoute({
 
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/',
+  path: "/",
   component: DailyEntryPage,
 });
 
 const historyRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/history',
+  path: "/history",
   component: HistoryPage,
 });
 
 const recordDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/history/$recordId',
+  path: "/history/$recordId",
   component: RecordDetailPage,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, historyRoute, recordDetailRoute]);
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  historyRoute,
+  recordDetailRoute,
+]);
 
 const router = createRouter({ routeTree });
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router;
   }

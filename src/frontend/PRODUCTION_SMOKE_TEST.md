@@ -35,7 +35,16 @@ This checklist verifies that the Daily Inventory Balance app is working correctl
   - Ingredient Balance and Order inputs accept numeric values
 - [ ] Verify the Save Record button remains clickable (not grayed out after backend is ready)
 
-### 4. Daily Entry Button Functionality Check
+### 4. Verify New Ingredients Appear
+- [ ] Scroll through the Vegetables section on Daily Entry page
+- [ ] Confirm "BROKELY /kg" appears in the Vegetables section
+- [ ] Confirm "BABYCORN/ pkt" appears in the Vegetables section
+- [ ] Confirm "PALAK/ kg" appears in the Vegetables section
+- [ ] Scroll through the Dairy section on Daily Entry page
+- [ ] Confirm "NOODLE /pkt" appears in the Dairy section
+- [ ] Verify all new ingredients have Balance and Order input fields
+
+### 5. Daily Entry Button Functionality Check
 - [ ] Test "Clear Form" button:
   - Enter some test data in a few ingredient fields
   - Select a Balance Date
@@ -51,7 +60,7 @@ This checklist verifies that the Daily Inventory Balance app is working correctl
   - Verify a success toast appears
   - Paste into a text editor and verify the formatted message appears
 
-### 5. Save a Daily Entry Record
+### 6. Save a Daily Entry Record
 - [ ] Select a Restaurant Name (Andaaz or Kai wok Express)
 - [ ] Select a Balance Date using the date picker
 - [ ] Enter test data for at least 3 ingredients:
@@ -63,25 +72,36 @@ This checklist verifies that the Daily Inventory Balance app is working correctl
 - [ ] Confirm the form clears after saving
 - [ ] Verify the app automatically navigates to the Record Details page for the saved record
 
-### 6. Verify Record in History
+### 7. Verify Record in History
 - [ ] Navigate to the "History" page using the navigation link
 - [ ] Verify the record you just saved appears in the list
 - [ ] Check that the Restaurant Name and Balance Date match what you entered
 - [ ] Confirm the record shows the correct number of ingredients
 
-### 7. View Record Details
+### 8. View Record Details
 - [ ] Click "View Details" on the record you just saved
 - [ ] Verify all ingredient data is displayed correctly
 - [ ] Check that Balance and Order values match your input
 - [ ] Verify the "Copy" button is present
 - [ ] Verify the "Export CSV" button is present
 
-### 8. Test Copy Functionality (Optional)
+### 9. Test New Ingredients in Saved Records
+- [ ] Save a new record with data for the new ingredients:
+  - Enter values for "BROKELY /kg" (e.g., Balance: 2, Order: 5)
+  - Enter values for "BABYCORN/ pkt" (e.g., Balance: 1, Order: 3)
+  - Enter values for "PALAK/ kg" (e.g., Balance: 3, Order: 7)
+  - Enter values for "NOODLE /pkt" (e.g., Balance: 4, Order: 6)
+- [ ] Navigate to the saved record's detail page
+- [ ] Verify all new ingredients appear in the record details
+- [ ] Click "Copy" and verify new ingredients with non-zero Order values appear in the copied text
+- [ ] Click "Export CSV" and verify new ingredients appear as rows in the CSV file
+
+### 10. Test Copy Functionality (Optional)
 - [ ] Click "Copy" on the record detail page
 - [ ] Paste the content into a text editor
 - [ ] Verify the format is readable and includes all ingredient data
 
-### 9. Test CSV Export (Optional)
+### 11. Test CSV Export (Optional)
 - [ ] Click "Export CSV" on the record detail page
 - [ ] Verify a CSV file downloads
 - [ ] Open the CSV file and confirm data is properly formatted
@@ -101,6 +121,10 @@ This checklist verifies that the Daily Inventory Balance app is working correctl
 - Daily Entry action buttons are disabled or non-responsive after page finishes loading
 - "Clear Form" button does not clear inputs or reset Balance Date
 - "Copy for Vendor" button does not copy or show validation toast
+- New ingredients (BROKELY, BABYCORN, PALAK, NOODLE) do not appear in their respective categories
+- New ingredients do not appear in saved record details
+- New ingredients do not appear in Copy output (when Order > 0)
+- New ingredients do not appear in CSV export
 - Unable to save a record
 - App does not navigate to Record Details after saving
 - Saved record does not appear in History
@@ -110,7 +134,8 @@ This checklist verifies that the Daily Inventory Balance app is working correctl
 
 - If the test fails at step 2 (Backend Connectivity), the deployment may not be complete or there may be a configuration issue
 - If the test fails at step 3 (Page Stability), there is likely an infinite render loop in the Daily Entry page
-- If the test fails at step 4 (Button Functionality), the actor diagnostics may not be detecting the backend connection correctly
-- The app should automatically navigate to the saved record's detail page after a successful save (step 5)
+- If the test fails at step 4 (New Ingredients), the predefined ingredients list was not updated correctly
+- If the test fails at step 5 (Button Functionality), the actor diagnostics may not be detecting the backend connection correctly
+- The app should automatically navigate to the saved record's detail page after a successful save (step 6)
 - All other failures should be investigated as potential bugs
 - This smoke test should be run after every production deployment

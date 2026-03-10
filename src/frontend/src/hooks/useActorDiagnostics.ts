@@ -1,5 +1,5 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Non-immutable helper hook that inspects actor query state and provides
@@ -23,7 +23,7 @@ export function useActorDiagnostics() {
       const queries = queryClient.getQueryCache().findAll({
         predicate: (query) => {
           const key = query.queryKey;
-          return Array.isArray(key) && key[0] === 'actor';
+          return Array.isArray(key) && key[0] === "actor";
         },
       });
 
@@ -33,26 +33,28 @@ export function useActorDiagnostics() {
       if (actorQuery) {
         const state = actorQuery.state;
         return {
-          isActorReady: state.status === 'success' && !!state.data,
-          isActorLoading: state.status === 'pending',
-          hasActorError: state.status === 'error',
-        };
-      } else {
-        // No actor query found yet
-        return {
-          isActorReady: false,
-          isActorLoading: true,
-          hasActorError: false,
+          isActorReady: state.status === "success" && !!state.data,
+          isActorLoading: state.status === "pending",
+          hasActorError: state.status === "error",
         };
       }
+      // No actor query found yet
+      return {
+        isActorReady: false,
+        isActorLoading: true,
+        hasActorError: false,
+      };
     };
 
     // Initial sync: read current state immediately
     const initialDiagnostics = computeDiagnostics();
     if (
-      initialDiagnostics.isActorReady !== prevDiagnosticsRef.current.isActorReady ||
-      initialDiagnostics.isActorLoading !== prevDiagnosticsRef.current.isActorLoading ||
-      initialDiagnostics.hasActorError !== prevDiagnosticsRef.current.hasActorError
+      initialDiagnostics.isActorReady !==
+        prevDiagnosticsRef.current.isActorReady ||
+      initialDiagnostics.isActorLoading !==
+        prevDiagnosticsRef.current.isActorLoading ||
+      initialDiagnostics.hasActorError !==
+        prevDiagnosticsRef.current.hasActorError
     ) {
       prevDiagnosticsRef.current = initialDiagnostics;
       setDiagnostics(initialDiagnostics);
@@ -64,9 +66,12 @@ export function useActorDiagnostics() {
 
       // Only update state if diagnostics actually changed
       if (
-        nextDiagnostics.isActorReady !== prevDiagnosticsRef.current.isActorReady ||
-        nextDiagnostics.isActorLoading !== prevDiagnosticsRef.current.isActorLoading ||
-        nextDiagnostics.hasActorError !== prevDiagnosticsRef.current.hasActorError
+        nextDiagnostics.isActorReady !==
+          prevDiagnosticsRef.current.isActorReady ||
+        nextDiagnostics.isActorLoading !==
+          prevDiagnosticsRef.current.isActorLoading ||
+        nextDiagnostics.hasActorError !==
+          prevDiagnosticsRef.current.hasActorError
       ) {
         prevDiagnosticsRef.current = nextDiagnostics;
         setDiagnostics(nextDiagnostics);
@@ -81,7 +86,7 @@ export function useActorDiagnostics() {
     queryClient.invalidateQueries({
       predicate: (query) => {
         const key = query.queryKey;
-        return Array.isArray(key) && key[0] === 'actor';
+        return Array.isArray(key) && key[0] === "actor";
       },
     });
   };

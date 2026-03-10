@@ -6,7 +6,6 @@ import Runtime "mo:core/Runtime";
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
 
-
 actor {
   // Initialize the access control system
   let accessControlState = AccessControl.initState();
@@ -93,8 +92,12 @@ actor {
     { name = "GREEN CHILLI"; category = "Vegetables" },
     { name = "CORIANDER"; category = "Vegetables" },
     { name = "ONION"; category = "Vegetables" },
+    { name = "BROKELY /kg"; category = "Vegetables" },
+    { name = "BABYCORN/ pkt"; category = "Vegetables" },
+    { name = "PALAK/ kg"; category = "Vegetables" },
     // Dairy
     { name = "PANEER"; category = "Dairy" },
+    { name = "NOODLE /pkt"; category = "Dairy" },
   ];
 
   let allIngredients = legacyIngredients.concat(newIngredients);
@@ -127,7 +130,11 @@ actor {
   };
 
   // Add a daily record
-  public shared ({ caller }) func addDailyRecord(meals : [Meal], timestamp : Timestamp, restaurantName : Text) : async DailyRecordId {
+  public shared ({ caller }) func addDailyRecord(
+    meals : [Meal],
+    timestamp : Timestamp,
+    restaurantName : Text,
+  ) : async Nat {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can add daily records");
     };
@@ -199,4 +206,3 @@ actor {
     };
   };
 };
-
