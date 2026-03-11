@@ -15,21 +15,25 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronRight, FileText, Loader2 } from "lucide-react";
+import { ChevronRight, FileText, Loader2, LogIn } from "lucide-react";
 import { useState } from "react";
 import BackendConnectionErrorCard from "../components/BackendConnectionErrorCard";
 import { useActorDiagnostics } from "../hooks/useActorDiagnostics";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useGetAllDailyRecords } from "../hooks/useQueries";
 import { formatDateDDMMYYYY } from "../utils/dateFormat";
 
 export default function HistoryPage() {
   const { data: records, isLoading, error } = useGetAllDailyRecords();
   const { hasActorError, isActorLoading, retry } = useActorDiagnostics();
+  const { identity, login, loginStatus } = useInternetIdentity();
   const [isRetrying, setIsRetrying] = useState(false);
   const navigate = useNavigate();
 
+  const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
+  const isLoggingIn = loginStatus === "logging-in";
+
   const handleViewRecord = (recordIndex: number) => {
-    // Use the array index as the stable unique record identifier
     navigate({
       to: "/history/$recordId",
       params: { recordId: String(recordIndex) },
@@ -41,6 +45,52 @@ export default function HistoryPage() {
     retry();
     setTimeout(() => setIsRetrying(false), 1500);
   };
+
+  // Show sign-in prompt when not authenticated
+  if (!isAuthenticated && !isActorLoading) {
+    return (
+      <div className="max-w-7xl mx-auto">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl">Saved Records</CardTitle>
+            <CardDescription>
+              View and export your previously saved daily records
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-12" data-ocid="history.empty_state">
+              <LogIn className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-base font-semibold mb-2">
+                Sign in to view history
+              </p>
+              <p className="text-sm text-muted-foreground mb-6">
+                You need to sign in with Internet Identity to access saved
+                records.
+              </p>
+              <Button
+                onClick={login}
+                disabled={isLoggingIn}
+                className="gap-2"
+                data-ocid="history.sign_in_button"
+              >
+                {isLoggingIn ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="w-4 h-4" />
+                    Sign In
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Show connection error only if actor initialization actually failed
   if (hasActorError) {
@@ -205,7 +255,7 @@ export default function HistoryPage() {
               </div>
             </>
           ) : (
-            <div className="text-center py-12">
+            <div className="text-center py-12" data-ocid="history.empty_state">
               <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground mb-2">No records found</p>
               <p className="text-sm text-muted-foreground">

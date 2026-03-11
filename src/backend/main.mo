@@ -104,7 +104,14 @@ actor {
 
   var nextDailyRecordId : Nat = 0;
 
+  // Per-user records map (kept for backward compatibility / per-user save)
   let users = Map.empty<Principal, [DailyRecord]>();
+
+  // Global ordered list of ALL records from all users — used by getAllDailyRecords
+  // This ensures any authenticated user (phone or web) sees all records regardless of which
+  // device/identity saved them.
+  var globalRecords : [DailyRecord] = [];
+
   let userProfiles = Map.empty<Principal, UserProfile>();
 
   // User profile management
@@ -145,6 +152,7 @@ actor {
       restaurantName;
     };
 
+    // Store per-user (for backward compatibility)
     switch (users.get(caller)) {
       case (null) {
         users.add(caller, [newRecord]);
@@ -153,6 +161,9 @@ actor {
         users.add(caller, existingRecords.concat([newRecord]));
       };
     };
+
+    // Also store in global list so all authenticated users can see it
+    globalRecords := globalRecords.concat([newRecord]);
 
     nextDailyRecordId += 1;
     nextDailyRecordId - 1;
@@ -165,15 +176,26 @@ actor {
     allIngredients.filter(func(ingredient) { ingredient.category == category });
   };
 
+  // Returns ALL daily records from all users — any authenticated user sees all records.
+  // Records saved on phone are visible on web and vice versa, as long as the user is signed in.
   public query ({ caller }) func getAllDailyRecords() : async [DailyRecord] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can access daily records");
     };
 
-    switch (users.get(caller)) {
-      case (null) { [] };
-      case (?records) { records };
+    // Return global records (all records from all principals).
+    // If globalRecords is empty (pre-migration data exists only in per-user map),
+    // fall back to collecting from the per-user map so existing data is not lost.
+    if (globalRecords.size() > 0) {
+      return globalRecords;
     };
+
+    // Fallback: collect existing records from per-user map (backward-compatible migration)
+    var migrated : [DailyRecord] = [];
+    for ((_, userRecords) in users.entries()) {
+      migrated := migrated.concat(userRecords);
+    };
+    migrated;
   };
 
   public query ({ caller }) func getAllCategories() : async [Category] {
