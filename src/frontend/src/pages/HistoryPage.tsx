@@ -6,6 +6,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -15,19 +17,65 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronRight, FileText, Loader2, LogIn } from "lucide-react";
+import {
+  ChevronRight,
+  FileText,
+  Loader2,
+  LogIn,
+  Search,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 import BackendConnectionErrorCard from "../components/BackendConnectionErrorCard";
 import { useActorDiagnostics } from "../hooks/useActorDiagnostics";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useGetAllDailyRecords } from "../hooks/useQueries";
+import type { SavedDailyRecord } from "../types/dailyForm";
 import { formatDateDDMMYYYY } from "../utils/dateFormat";
+
+function getLocalDateString(ts: bigint): string {
+  const ms = Number(ts / 1_000_000n);
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function filterRecords(
+  records: SavedDailyRecord[],
+  searchText: string,
+  fromDate: string,
+  toDate: string,
+): SavedDailyRecord[] {
+  return records.filter((r) => {
+    // Search filter
+    if (searchText) {
+      const q = searchText.toLowerCase();
+      const matchRestaurant = r.restaurantName.toLowerCase().includes(q);
+      const matchDate = formatDateDDMMYYYY(r.timestamp).includes(q);
+      const matchOrder = String(r.orderNo).includes(q);
+      const matchIngredient = r.entries.some((e) =>
+        e.name.toLowerCase().includes(q),
+      );
+      if (!matchRestaurant && !matchDate && !matchOrder && !matchIngredient)
+        return false;
+    }
+    // Date range filter
+    if (fromDate || toDate) {
+      const ds = getLocalDateString(r.timestamp);
+      if (fromDate && ds < fromDate) return false;
+      if (toDate && ds > toDate) return false;
+    }
+    return true;
+  });
+}
 
 export default function HistoryPage() {
   const { data: records, isLoading, error } = useGetAllDailyRecords();
   const { hasActorError, isActorLoading, retry } = useActorDiagnostics();
   const { identity, login, loginStatus } = useInternetIdentity();
   const [isRetrying, setIsRetrying] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const navigate = useNavigate();
 
   const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
@@ -46,7 +94,14 @@ export default function HistoryPage() {
     setTimeout(() => setIsRetrying(false), 1500);
   };
 
-  // Show sign-in prompt when not authenticated
+  // Only clears search text — date range is left unchanged
+  const clearFilters = () => {
+    setSearchText("");
+  };
+
+  // "Clear All" only appears when there is text in the search box
+  const hasActiveFilters = !!searchText;
+
   if (!isAuthenticated && !isActorLoading) {
     return (
       <div className="max-w-7xl mx-auto">
@@ -92,7 +147,6 @@ export default function HistoryPage() {
     );
   }
 
-  // Show connection error only if actor initialization actually failed
   if (hasActorError) {
     return (
       <div className="max-w-7xl mx-auto">
@@ -105,7 +159,6 @@ export default function HistoryPage() {
     );
   }
 
-  // Show error if fetch failed (but actor is OK)
   if (error && !isLoading && !isActorLoading) {
     return (
       <div className="max-w-7xl mx-auto">
@@ -120,16 +173,94 @@ export default function HistoryPage() {
     );
   }
 
+  const filteredRecords = records
+    ? filterRecords(records, searchText, fromDate, toDate)
+    : [];
+
+  const totalRecords = records?.length ?? 0;
+
   return (
     <div className="max-w-7xl mx-auto">
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">Saved Records</CardTitle>
           <CardDescription>
-            View and export your previously saved daily records
+            {totalRecords > 0
+              ? `${totalRecords} total record${totalRecords !== 1 ? "s" : ""} — use search or date range to filter`
+              : "View and export your previously saved daily records"}
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Search & Filter Section */}
+          <div className="mb-5 space-y-3" data-ocid="history.filter.panel">
+            {/* Search Box */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by restaurant, date, order no., or ingredient..."
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                className="pl-9 pr-9"
+                data-ocid="history.search_input"
+              />
+              {searchText && (
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setSearchText("")}
+                  data-ocid="history.clear_search.button"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Custom Date Range */}
+            <div
+              className="flex flex-wrap gap-3 items-end p-3 bg-muted rounded-lg"
+              data-ocid="history.custom.panel"
+            >
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="from-date" className="text-xs font-semibold">
+                  From Date
+                </Label>
+                <Input
+                  id="from-date"
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="w-40"
+                  data-ocid="history.from.input"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="to-date" className="text-xs font-semibold">
+                  To Date
+                </Label>
+                <Input
+                  id="to-date"
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="w-40"
+                  data-ocid="history.to.input"
+                />
+              </div>
+              {hasActiveFilters && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="gap-1"
+                  data-ocid="history.clear.button"
+                >
+                  <X className="w-3 h-3" />
+                  Clear All
+                </Button>
+              )}
+            </div>
+          </div>
+
           {isLoading || isActorLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center space-y-4">
@@ -139,9 +270,14 @@ export default function HistoryPage() {
                 </p>
               </div>
             </div>
-          ) : records && records.length > 0 ? (
+          ) : filteredRecords.length > 0 ? (
             <>
-              {/* Desktop Table View - hidden on mobile */}
+              <p className="text-xs text-muted-foreground mb-3">
+                Showing {filteredRecords.length} of {totalRecords} record
+                {totalRecords !== 1 ? "s" : ""}
+              </p>
+
+              {/* Desktop Table View */}
               <div className="hidden sm:block overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -155,7 +291,7 @@ export default function HistoryPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {records.map((record) => {
+                    {filteredRecords.map((record) => {
                       const cats = [
                         ...new Set(record.entries.map((e) => e.category)),
                       ];
@@ -201,9 +337,9 @@ export default function HistoryPage() {
                 </Table>
               </div>
 
-              {/* Mobile Card View - visible only on mobile */}
+              {/* Mobile Card View */}
               <div className="sm:hidden space-y-3">
-                {records.map((record) => {
+                {filteredRecords.map((record) => {
                   const cats = [
                     ...new Set(record.entries.map((e) => e.category)),
                   ];
@@ -257,9 +393,10 @@ export default function HistoryPage() {
           ) : (
             <div className="text-center py-12" data-ocid="history.empty_state">
               <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground mb-2">No records found</p>
-              <p className="text-sm text-muted-foreground">
-                Start by creating your first daily entry
+              <p className="text-muted-foreground">
+                {hasActiveFilters
+                  ? "No records match your search or date range"
+                  : "No records saved yet"}
               </p>
             </div>
           )}
