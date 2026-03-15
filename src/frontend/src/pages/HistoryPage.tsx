@@ -6,6 +6,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -19,6 +25,7 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 import {
   ChevronRight,
+  Download,
   FileText,
   Loader2,
   LogIn,
@@ -26,12 +33,15 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import BackendConnectionErrorCard from "../components/BackendConnectionErrorCard";
 import { useActorDiagnostics } from "../hooks/useActorDiagnostics";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useGetAllDailyRecords } from "../hooks/useQueries";
 import type { SavedDailyRecord } from "../types/dailyForm";
+import { exportRecordToCSV } from "../utils/csvExport";
 import { formatDateDDMMYYYY } from "../utils/dateFormat";
+import { formatRecordAsPlainText } from "../utils/recordPlainText";
 
 function getLocalDateString(ts: bigint): string {
   const ms = Number(ts / 1_000_000n);
@@ -46,7 +56,6 @@ function filterRecords(
   toDate: string,
 ): SavedDailyRecord[] {
   return records.filter((r) => {
-    // Search filter
     if (searchText) {
       const q = searchText.toLowerCase();
       const matchRestaurant = r.restaurantName.toLowerCase().includes(q);
@@ -58,7 +67,6 @@ function filterRecords(
       if (!matchRestaurant && !matchDate && !matchOrder && !matchIngredient)
         return false;
     }
-    // Date range filter
     if (fromDate || toDate) {
       const ds = getLocalDateString(r.timestamp);
       if (fromDate && ds < fromDate) return false;
@@ -76,6 +84,8 @@ export default function HistoryPage() {
   const [searchText, setSearchText] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [appliedFromDate, setAppliedFromDate] = useState("");
+  const [appliedToDate, setAppliedToDate] = useState("");
   const navigate = useNavigate();
 
   const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
@@ -94,12 +104,26 @@ export default function HistoryPage() {
     setTimeout(() => setIsRetrying(false), 1500);
   };
 
-  // Only clears search text — date range is left unchanged
+  const handleSearch = () => {
+    setAppliedFromDate(fromDate);
+    setAppliedToDate(toDate);
+  };
+
   const clearFilters = () => {
     setSearchText("");
   };
 
-  // "Clear All" only appears when there is text in the search box
+  const handleCopyPlainText = async (record: SavedDailyRecord) => {
+    const text = formatRecordAsPlainText(record);
+    await navigator.clipboard.writeText(text);
+    toast.success("Order copied to clipboard!");
+  };
+
+  const handleExportCSV = (record: SavedDailyRecord) => {
+    exportRecordToCSV(record);
+    toast.success("CSV exported!");
+  };
+
   const hasActiveFilters = !!searchText;
 
   if (!isAuthenticated && !isActorLoading) {
@@ -174,7 +198,7 @@ export default function HistoryPage() {
   }
 
   const filteredRecords = records
-    ? filterRecords(records, searchText, fromDate, toDate)
+    ? filterRecords(records, searchText, appliedFromDate, appliedToDate)
     : [];
 
   const totalRecords = records?.length ?? 0;
@@ -246,6 +270,14 @@ export default function HistoryPage() {
                   data-ocid="history.to.input"
                 />
               </div>
+              <Button
+                onClick={handleSearch}
+                className="gap-2 bg-gray-900 hover:bg-gray-800 text-white font-bold"
+                data-ocid="history.search.button"
+              >
+                <Search className="w-4 h-4" />
+                Search
+              </Button>
               {hasActiveFilters && (
                 <Button
                   variant="outline"
@@ -291,14 +323,15 @@ export default function HistoryPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredRecords.map((record) => {
+                    {filteredRecords.map((record, idx) => {
                       const cats = [
                         ...new Set(record.entries.map((e) => e.category)),
                       ];
+                      const rowNum = idx + 1;
                       return (
                         <TableRow
                           key={record.recordIndex}
-                          data-ocid={`history.row.${record.recordIndex + 1}`}
+                          data-ocid={`history.row.${rowNum}`}
                         >
                           <TableCell className="font-bold text-base text-center">
                             #{record.orderNo}
@@ -317,18 +350,51 @@ export default function HistoryPage() {
                             {record.entries.length !== 1 ? "s" : ""}
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="gap-2"
-                              onClick={() =>
-                                handleViewRecord(record.recordIndex)
-                              }
-                              data-ocid={`history.view_button.${record.recordIndex + 1}`}
-                            >
-                              View Details
-                              <ChevronRight className="w-4 h-4" />
-                            </Button>
+                            <div className="flex items-center justify-end gap-1">
+                              {/* Export Dropdown */}
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-1"
+                                    data-ocid={`history.export_button.${rowNum}`}
+                                  >
+                                    <Download className="w-3.5 h-3.5" />
+                                    Export
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => handleCopyPlainText(record)}
+                                    data-ocid={`history.export_plaintext.${rowNum}`}
+                                  >
+                                    <FileText className="w-4 h-4 mr-2" />
+                                    Plain Text (Copy)
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleExportCSV(record)}
+                                    data-ocid={`history.export_csv.${rowNum}`}
+                                  >
+                                    <Download className="w-4 h-4 mr-2" />
+                                    CSV File (Excel/Sheets)
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="gap-2"
+                                onClick={() =>
+                                  handleViewRecord(record.recordIndex)
+                                }
+                                data-ocid={`history.view_button.${rowNum}`}
+                              >
+                                View Details
+                                <ChevronRight className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
@@ -339,15 +405,16 @@ export default function HistoryPage() {
 
               {/* Mobile Card View */}
               <div className="sm:hidden space-y-3">
-                {filteredRecords.map((record) => {
+                {filteredRecords.map((record, idx) => {
                   const cats = [
                     ...new Set(record.entries.map((e) => e.category)),
                   ];
+                  const cardNum = idx + 1;
                   return (
                     <Card
                       key={record.recordIndex}
                       className="p-4"
-                      data-ocid={`history.card.${record.recordIndex + 1}`}
+                      data-ocid={`history.card.${cardNum}`}
                     >
                       <div className="space-y-3">
                         <div className="flex items-start justify-between gap-2">
@@ -368,21 +435,56 @@ export default function HistoryPage() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-2">
                           <span className="text-sm text-muted-foreground">
                             {record.entries.length} ingredient
                             {record.entries.length !== 1 ? "s" : ""}
                           </span>
-                          <Button
-                            variant="default"
-                            size="sm"
-                            className="gap-2"
-                            onClick={() => handleViewRecord(record.recordIndex)}
-                            data-ocid={`history.mobile_view_button.${record.recordIndex + 1}`}
-                          >
-                            View Details
-                            <ChevronRight className="w-4 h-4" />
-                          </Button>
+                          <div className="flex gap-2">
+                            {/* Mobile Export Dropdown */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-1"
+                                  data-ocid={`history.export_button.${cardNum}`}
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                  Export
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => handleCopyPlainText(record)}
+                                  data-ocid={`history.export_plaintext.${cardNum}`}
+                                >
+                                  <FileText className="w-4 h-4 mr-2" />
+                                  Plain Text (Copy)
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleExportCSV(record)}
+                                  data-ocid={`history.export_csv.${cardNum}`}
+                                >
+                                  <Download className="w-4 h-4 mr-2" />
+                                  CSV File (Excel/Sheets)
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="gap-2"
+                              onClick={() =>
+                                handleViewRecord(record.recordIndex)
+                              }
+                              data-ocid={`history.mobile_view_button.${cardNum}`}
+                            >
+                              View
+                              <ChevronRight className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </Card>
