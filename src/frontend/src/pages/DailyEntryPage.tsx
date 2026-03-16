@@ -61,18 +61,6 @@ interface CartItem {
   nextDayOrder: number;
 }
 
-// ---- Category button label + border colour map ----
-const CATEGORY_BORDER: Record<string, string> = {
-  Vegetables: "border-green-500 text-green-800 bg-green-100",
-  Dairy: "border-sky-500 text-sky-800 bg-sky-100",
-  "Non-Veg": "border-orange-500 text-orange-800 bg-orange-100",
-};
-const CATEGORY_ACTIVE: Record<string, string> = {
-  Vegetables: "ring-2 ring-green-500 bg-green-200 font-bold",
-  Dairy: "ring-2 ring-sky-500 bg-sky-200 font-bold",
-  "Non-Veg": "ring-2 ring-orange-500 bg-orange-200 font-bold",
-};
-
 export default function DailyEntryPage() {
   const addRecord = useAddDailyRecord();
   const { isActorReady, isActorLoading, hasActorError, retry } =
@@ -108,6 +96,7 @@ export default function DailyEntryPage() {
   } | null>(null);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const addItemButtonRef = useRef<HTMLButtonElement>(null);
 
   const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
 
@@ -156,7 +145,6 @@ export default function DailyEntryPage() {
     }
 
     if (editingIndex !== null) {
-      // Update existing item
       setCartItems((prev) => {
         const updated = [...prev];
         updated[editingIndex] = {
@@ -169,17 +157,14 @@ export default function DailyEntryPage() {
       });
       setEditingIndex(null);
       toast.success("Item updated.");
-      // Reset entry fields but keep category selected
       setSearchText("");
       setSelectedIngredient("");
       setBalanceValue("");
       setOrderValue("");
       setTimeout(() => searchInputRef.current?.focus(), 50);
     } else {
-      // Check for duplicate
       const exists = cartItems.findIndex((c) => c.name === selectedIngredient);
       if (exists >= 0) {
-        // Show duplicate alert — do NOT add yet
         setPendingDuplicate({
           existingIndex: exists,
           newItem: {
@@ -201,7 +186,6 @@ export default function DailyEntryPage() {
           },
         ]);
         toast.success("Item added.");
-        // Reset entry fields but keep category selected
         setSearchText("");
         setSelectedIngredient("");
         setBalanceValue("");
@@ -333,7 +317,6 @@ export default function DailyEntryPage() {
       setOrderValue("");
       setEditingIndex(null);
 
-      // Navigate to history — the new record will appear there with its correct Order No.
       navigate({ to: "/history" });
     } catch (error) {
       const errorMessage =
@@ -477,33 +460,42 @@ export default function DailyEntryPage() {
                 </div>
               )}
 
-              {/* ── Step A: Category Selection ── */}
+              {/* ── Step 1: Category Selection — Select box matching Restaurant Name style ── */}
               <div
-                className={`space-y-2 ${!restaurantName || !balanceDate ? "opacity-40 pointer-events-none select-none" : ""}`}
+                className={`space-y-2 ${
+                  !restaurantName || !balanceDate
+                    ? "opacity-40 pointer-events-none select-none"
+                    : ""
+                }`}
               >
                 <Label className="text-base font-semibold">
                   Step 1: Select Category
                 </Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {CATEGORIES.map((cat) => (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => handleCategorySelect(cat)}
-                      data-ocid={`category.${cat.toLowerCase().replace(/[^a-z0-9]/g, "")}.toggle`}
-                      className={`
-                        py-3 px-2 rounded-lg border-2 text-sm font-medium transition-all
-                        ${CATEGORY_BORDER[cat] ?? "border-gray-300 text-gray-700 bg-gray-100"}
-                        ${selectedCategory === cat ? (CATEGORY_ACTIVE[cat] ?? "") : "opacity-80"}
-                      `}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
+                <Select
+                  value={selectedCategory}
+                  onValueChange={handleCategorySelect}
+                >
+                  <SelectTrigger
+                    className="mt-1 w-full"
+                    data-ocid="category.select"
+                  >
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map((cat) => (
+                      <SelectItem
+                        key={cat}
+                        value={cat}
+                        className="text-lg font-bold"
+                      >
+                        {cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {/* ── Step B + C: Search + Values — always rendered when category selected, layout never shifts ── */}
+              {/* ── Step 2: Search & Add ── */}
               <div
                 className={`rounded-lg border transition-all ${
                   selectedCategory
@@ -529,9 +521,8 @@ export default function DailyEntryPage() {
                   </p>
                 ) : (
                   <div className="space-y-3">
-                    {/* Search box with dropdown rendered ABOVE — use padding-top so dropdown never pushes content down */}
+                    {/* Search box with dropdown rendered ABOVE */}
                     <div className="relative">
-                      {/* Dropdown suggestions — absolutely positioned ABOVE, does NOT shift layout */}
                       {showDropdown && filteredIngredients.length > 0 && (
                         <div className="absolute z-50 w-full bottom-full mb-1 bg-[#111111] border border-gray-700 rounded-lg shadow-lg max-h-52 overflow-y-auto">
                           {filteredIngredients.map((ing) => (
@@ -540,7 +531,6 @@ export default function DailyEntryPage() {
                               type="button"
                               className="w-full text-left px-4 py-3 text-sm font-bold text-white bg-[#111111] hover:bg-[#222222] transition-colors border-b border-gray-700 last:border-b-0"
                               onMouseDown={(e) => {
-                                // Use onMouseDown to prevent blur from hiding dropdown before click registers
                                 e.preventDefault();
                                 handleSelectIngredient(ing.name);
                               }}
@@ -560,12 +550,20 @@ export default function DailyEntryPage() {
                       <Input
                         ref={searchInputRef}
                         type="text"
+                        inputMode="text"
                         placeholder="Type to search ingredients..."
                         value={searchText}
                         onChange={(e) => handleSearchChange(e.target.value)}
-                        onFocus={() =>
-                          searchText.length > 0 && setShowDropdown(true)
-                        }
+                        onFocus={() => {
+                          if (searchText.length > 0) setShowDropdown(true);
+                          // After keyboard animates in (~350ms), scroll the Add Item button into view
+                          setTimeout(() => {
+                            addItemButtonRef.current?.scrollIntoView({
+                              behavior: "smooth",
+                              block: "nearest",
+                            });
+                          }, 350);
+                        }}
                         onBlur={() =>
                           setTimeout(() => setShowDropdown(false), 150)
                         }
@@ -575,7 +573,7 @@ export default function DailyEntryPage() {
                       />
                     </div>
 
-                    {/* Selected ingredient badge — fixed height slot so layout is stable */}
+                    {/* Selected ingredient badge */}
                     <div className="min-h-[2.25rem] flex items-center">
                       {selectedIngredient ? (
                         <div
@@ -595,7 +593,7 @@ export default function DailyEntryPage() {
                       )}
                     </div>
 
-                    {/* Balance + Order inputs — always visible, never shift */}
+                    {/* Balance + Order inputs */}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <Label className="text-sm font-medium mb-1 block">
@@ -631,6 +629,7 @@ export default function DailyEntryPage() {
 
                     {/* Add Item button */}
                     <Button
+                      ref={addItemButtonRef}
                       type="button"
                       className="w-full gap-2 font-bold text-lg bg-[#001a4d] hover:bg-[#00123a] text-white"
                       onClick={handleAddItem}
@@ -644,7 +643,7 @@ export default function DailyEntryPage() {
                 )}
               </div>
 
-              {/* ── Step D: Cart list ── */}
+              {/* ── Cart list ── */}
               {cartItems.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">

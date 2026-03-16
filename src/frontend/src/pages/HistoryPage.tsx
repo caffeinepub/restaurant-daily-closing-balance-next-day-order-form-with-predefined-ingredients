@@ -24,13 +24,13 @@ import {
 } from "@/components/ui/table";
 import { useNavigate } from "@tanstack/react-router";
 import {
+  CalendarSearch,
   ChevronRight,
   Download,
   FileText,
   Loader2,
   LogIn,
   Search,
-  X,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -44,29 +44,18 @@ import { formatDateDDMMYYYY } from "../utils/dateFormat";
 import { formatRecordAsPlainText } from "../utils/recordPlainText";
 
 function getLocalDateString(ts: bigint): string {
-  const ms = Number(ts / 1_000_000n);
+  // timestamp is stored in milliseconds (from Date.getTime())
+  const ms = Number(ts);
   const d = new Date(ms);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function filterRecords(
   records: SavedDailyRecord[],
-  searchText: string,
   fromDate: string,
   toDate: string,
 ): SavedDailyRecord[] {
   return records.filter((r) => {
-    if (searchText) {
-      const q = searchText.toLowerCase();
-      const matchRestaurant = r.restaurantName.toLowerCase().includes(q);
-      const matchDate = formatDateDDMMYYYY(r.timestamp).includes(q);
-      const matchOrder = String(r.orderNo).includes(q);
-      const matchIngredient = r.entries.some((e) =>
-        e.name.toLowerCase().includes(q),
-      );
-      if (!matchRestaurant && !matchDate && !matchOrder && !matchIngredient)
-        return false;
-    }
     if (fromDate || toDate) {
       const ds = getLocalDateString(r.timestamp);
       if (fromDate && ds < fromDate) return false;
@@ -81,11 +70,11 @@ export default function HistoryPage() {
   const { hasActorError, isActorLoading, retry } = useActorDiagnostics();
   const { identity, login, loginStatus } = useInternetIdentity();
   const [isRetrying, setIsRetrying] = useState(false);
-  const [searchText, setSearchText] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [appliedFromDate, setAppliedFromDate] = useState("");
   const [appliedToDate, setAppliedToDate] = useState("");
+  const [hasSearched, setHasSearched] = useState(false);
   const navigate = useNavigate();
 
   const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
@@ -107,10 +96,7 @@ export default function HistoryPage() {
   const handleSearch = () => {
     setAppliedFromDate(fromDate);
     setAppliedToDate(toDate);
-  };
-
-  const clearFilters = () => {
-    setSearchText("");
+    setHasSearched(true);
   };
 
   const handleCopyPlainText = async (record: SavedDailyRecord) => {
@@ -123,8 +109,6 @@ export default function HistoryPage() {
     exportRecordToCSV(record);
     toast.success("CSV exported!");
   };
-
-  const hasActiveFilters = !!searchText;
 
   if (!isAuthenticated && !isActorLoading) {
     return (
@@ -197,9 +181,10 @@ export default function HistoryPage() {
     );
   }
 
-  const filteredRecords = records
-    ? filterRecords(records, searchText, appliedFromDate, appliedToDate)
-    : [];
+  const filteredRecords =
+    records && hasSearched
+      ? filterRecords(records, appliedFromDate, appliedToDate)
+      : [];
 
   const totalRecords = records?.length ?? 0;
 
@@ -209,37 +194,12 @@ export default function HistoryPage() {
         <CardHeader>
           <CardTitle className="text-2xl">Saved Records</CardTitle>
           <CardDescription>
-            {totalRecords > 0
-              ? `${totalRecords} total record${totalRecords !== 1 ? "s" : ""} — use search or date range to filter`
-              : "View and export your previously saved daily records"}
+            Select a date range and tap Search to view records
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Search & Filter Section */}
-          <div className="mb-5 space-y-3" data-ocid="history.filter.panel">
-            {/* Search Box */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by restaurant, date, order no., or ingredient..."
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                className="pl-9 pr-9"
-                data-ocid="history.search_input"
-              />
-              {searchText && (
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  onClick={() => setSearchText("")}
-                  data-ocid="history.clear_search.button"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-
-            {/* Custom Date Range */}
+          {/* Date Range Filter Section */}
+          <div className="mb-5" data-ocid="history.filter.panel">
             <div
               className="flex flex-wrap gap-3 items-end p-3 bg-muted rounded-lg"
               data-ocid="history.custom.panel"
@@ -278,18 +238,6 @@ export default function HistoryPage() {
                 <Search className="w-4 h-4" />
                 Search
               </Button>
-              {hasActiveFilters && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="gap-1"
-                  data-ocid="history.clear.button"
-                >
-                  <X className="w-3 h-3" />
-                  Clear All
-                </Button>
-              )}
             </div>
           </div>
 
@@ -301,6 +249,17 @@ export default function HistoryPage() {
                   Loading records...
                 </p>
               </div>
+            </div>
+          ) : !hasSearched ? (
+            <div className="text-center py-14" data-ocid="history.empty_state">
+              <CalendarSearch className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-base font-semibold text-foreground mb-1">
+                No records shown yet
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Select a date range above and tap{" "}
+                <span className="font-semibold">Search</span> to view records.
+              </p>
             </div>
           ) : filteredRecords.length > 0 ? (
             <>
@@ -495,10 +454,11 @@ export default function HistoryPage() {
           ) : (
             <div className="text-center py-12" data-ocid="history.empty_state">
               <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">
-                {hasActiveFilters
-                  ? "No records match your search or date range"
-                  : "No records saved yet"}
+              <p className="text-lg font-semibold text-foreground mb-1">
+                No Record Found
+              </p>
+              <p className="text-sm text-muted-foreground">
+                No records match the selected date range.
               </p>
             </div>
           )}
