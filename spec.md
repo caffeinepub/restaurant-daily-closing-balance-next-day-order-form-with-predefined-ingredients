@@ -1,28 +1,21 @@
-# Restaurant Daily Closing Balance & Next-Day Order Form
+# Shri Hoshnagi F&B — Backend Connection Fix
 
 ## Current State
-HistoryPage has a date range filter (From/To date inputs) that applies reactively — records filter automatically as dates are typed. There is a search text box and a "Clear All" button. The RecordDetailPage has "Copy Order Details" and "Export CSV" buttons per individual record.
+The production canister (gtn3f-qaaaa-aaaah-atokq-cai) is stopped on the Internet Computer, causing IC0508 errors on the History page when `getAllDailyRecords` is called. Additionally, `useActor.ts` still calls `_initializeAccessControlWithSecret` which is a leftover from the old Internet Identity admin flow and is unnecessary.
 
 ## Requested Changes (Diff)
 
 ### Add
-- A **Search button** in the date range panel that, when clicked, triggers the date range filter (records only appear after the button is pressed, not reactively as dates are typed).
-- An **Export button** directly on each history list row/card (alongside "View Details"), with two format options shown as a small dropdown or modal choice:
-  - **Plain Text** — same format as the existing "Copy Order to Vendor" message (sent to clipboard or downloaded as .txt).
-  - **CSV** — same as existing Export CSV (downloadable .csv file).
+- Nothing new
 
 ### Modify
-- Date range filtering in HistoryPage: change from reactive (auto-filters on date input change) to **manual** (only filters when Search button is clicked). Displayed results should be empty/show prompt until Search is pressed.
-- On initial load, show all records (no date filter active). After user sets dates and clicks Search, show filtered results. If dates are cleared, clicking Search again shows all records.
-- Keep the existing "Clear All" behavior (only clears search text, not date range).
+- Rebuild backend to get a fresh running canister
+- Remove `_initializeAccessControlWithSecret` call from `useActor.ts` since admin now uses password login
 
 ### Remove
-- Nothing removed.
+- Stale `_initializeAccessControlWithSecret` actor call
 
 ## Implementation Plan
-1. Add local state `appliedFromDate` / `appliedToDate` in HistoryPage — these are the committed filter values used in `filterRecords`. The `fromDate`/`toDate` inputs remain draft state.
-2. Add a **Search** button next to the date inputs. On click: set `appliedFromDate = fromDate`, `appliedToDate = toDate`.
-3. Filter records using `appliedFromDate`/`appliedToDate` instead of `fromDate`/`toDate`.
-4. On initial load, `appliedFromDate` and `appliedToDate` are both empty strings so all records show.
-5. In HistoryPage, add an **Export** button per row/card with a dropdown offering "Plain Text" and "CSV" options. Plain text copies to clipboard (same as copy vendor message); CSV triggers file download.
-6. Import `formatRecordAsPlainText` and `exportRecordToCSV` utilities into HistoryPage for use in the inline export buttons.
+1. Regenerate Motoko backend (creates new canister)
+2. Update `useActor.ts` to remove stale `_initializeAccessControlWithSecret` call
+3. Validate and deploy
