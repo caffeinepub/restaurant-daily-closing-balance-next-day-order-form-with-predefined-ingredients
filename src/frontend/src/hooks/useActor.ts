@@ -9,9 +9,7 @@ export function useActor() {
   const actorQuery = useQuery<backendInterface>({
     queryKey: [ACTOR_QUERY_KEY],
     queryFn: async () => {
-      // Always create an anonymous actor.
-      // Regular users are authenticated via username/password (localStorage session).
-      // Admin panel has its own separate password-based auth.
+      // Always create an anonymous actor — auth is handled via username/password on the frontend
       return await createActorWithConfig();
     },
     staleTime: Number.POSITIVE_INFINITY,

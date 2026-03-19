@@ -1,13 +1,12 @@
 import Map "mo:core/Map";
 import Principal "mo:core/Principal";
 import Text "mo:core/Text";
-import Runtime "mo:core/Runtime";
 
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
 
 actor {
-  // Initialize the access control system
+  // Keep accessControlState stable var to maintain upgrade compatibility
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
 
@@ -41,16 +40,15 @@ actor {
     restaurantName : Text;
   };
 
-  // Predefined categories (not persistent)
+  // Keep categories stable var to maintain upgrade compatibility
   let categories : [Category] = [
     { name = "Vegetables" },
     { name = "Dairy" },
     { name = "Non-Veg" },
   ];
 
-  // Legacy ingredients (not persistent)
+  // Legacy ingredients
   let legacyIngredients : [Ingredient] = [
-    // Vegetables
     { name = "Tomat"; category = "Vegetables" },
     { name = "Poatao"; category = "Vegetables" },
     { name = "Capsicum"; category = "Vegetables" },
@@ -68,7 +66,6 @@ actor {
     { name = "mint"; category = "Vegetables" },
     { name = "ginger"; category = "Vegetables" },
     { name = "garlic"; category = "Vegetables" },
-    // Dairy
     { name = "milk"; category = "Dairy" },
     { name = "cream"; category = "Dairy" },
     { name = "butter"; category = "Dairy" },
@@ -76,7 +73,6 @@ actor {
     { name = "matar"; category = "Dairy" },
     { name = "egg"; category = "Dairy" },
     { name = "Dahi"; category = "Dairy" },
-    // Non-Veg
     { name = "chicken bonless"; category = "Non-Veg" },
     { name = "tandoori chicken"; category = "Non-Veg" },
     { name = "chicken thai"; category = "Non-Veg" },
@@ -85,9 +81,7 @@ actor {
     { name = "wings"; category = "Non-Veg" },
   ];
 
-  // New ingredients (not persistent)
   let newIngredients : [Ingredient] = [
-    // Vegetables
     { name = "BEANS"; category = "Vegetables" },
     { name = "GREEN CHILLI"; category = "Vegetables" },
     { name = "CORIANDER"; category = "Vegetables" },
@@ -95,7 +89,6 @@ actor {
     { name = "BROKELY /kg"; category = "Vegetables" },
     { name = "BABYCORN/ pkt"; category = "Vegetables" },
     { name = "PALAK/ kg"; category = "Vegetables" },
-    // Dairy
     { name = "PANEER"; category = "Dairy" },
     { name = "NOODLE /pkt"; category = "Dairy" },
   ];
@@ -104,93 +97,43 @@ actor {
 
   var nextDailyRecordId : Nat = 0;
 
-  // Per-user records map (kept for backward compatibility / per-user save)
   let users = Map.empty<Principal, [DailyRecord]>();
-
-  // Global ordered list of ALL records from all users — used by getAllDailyRecords
-  // This ensures any authenticated user (phone or web) sees all records regardless of which
-  // device/identity saved them.
   var globalRecords : [DailyRecord] = [];
-
   let userProfiles = Map.empty<Principal, UserProfile>();
 
-  // User profile management
-  public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can access profiles");
-    };
-    userProfiles.get(caller);
-  };
-
-  public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
-    if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Can only view your own profile");
-    };
-    userProfiles.get(user);
-  };
-
-  public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
-    };
-    userProfiles.add(caller, profile);
-  };
-
-  // Add a daily record
+  // Add a daily record — no permission check (auth handled by frontend username/password)
   public shared ({ caller }) func addDailyRecord(
     meals : [Meal],
     timestamp : Timestamp,
     restaurantName : Text,
   ) : async Nat {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can add daily records");
-    };
-
     let newRecord : DailyRecord = {
       meals;
       timestamp;
       restaurantName;
     };
 
-    // Store per-user (for backward compatibility)
     switch (users.get(caller)) {
-      case (null) {
-        users.add(caller, [newRecord]);
-      };
+      case (null) { users.add(caller, [newRecord]) };
       case (?existingRecords) {
-        users.add(caller, existingRecords.concat([newRecord]));
+        users.add(caller, existingRecords.concat([newRecord]))
       };
     };
 
-    // Also store in global list so all authenticated users can see it
     globalRecords := globalRecords.concat([newRecord]);
-
     nextDailyRecordId += 1;
     nextDailyRecordId - 1;
   };
 
-  public query ({ caller }) func getIngredientsByCategory(category : CategoryName) : async [Ingredient] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can access ingredients");
-    };
+  public query func getIngredientsByCategory(category : CategoryName) : async [Ingredient] {
     allIngredients.filter(func(ingredient) { ingredient.category == category });
   };
 
-  // Returns ALL daily records from all users — any authenticated user sees all records.
-  // Records saved on phone are visible on web and vice versa, as long as the user is signed in.
-  public query ({ caller }) func getAllDailyRecords() : async [DailyRecord] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can access daily records");
-    };
-
-    // Return global records (all records from all principals).
-    // If globalRecords is empty (pre-migration data exists only in per-user map),
-    // fall back to collecting from the per-user map so existing data is not lost.
+  // Returns ALL daily records — visible to any caller (auth on frontend)
+  public query func getAllDailyRecords() : async [DailyRecord] {
     if (globalRecords.size() > 0) {
       return globalRecords;
     };
-
-    // Fallback: collect existing records from per-user map (backward-compatible migration)
     var migrated : [DailyRecord] = [];
     for ((_, userRecords) in users.entries()) {
       migrated := migrated.concat(userRecords);
@@ -198,33 +141,42 @@ actor {
     migrated;
   };
 
-  public query ({ caller }) func getAllCategories() : async [Category] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can access categories");
-    };
-    categories;
-  };
-
-  public query ({ caller }) func getCategoriesByType(categoryType : Text) : async [Category] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can access categories");
-    };
-
-    let allCategories = [
+  public query func getAllCategories() : async [Category] {
+    [
       { name = "Vegetables" },
       { name = "Dairy" },
       { name = "Non-Veg" },
-      { name = "Spices" },
+      { name = "Disposable" },
       { name = "Beverages" },
+      { name = "Others" },
+    ];
+  };
+
+  public query func getCategoriesByType(categoryType : Text) : async [Category] {
+    let allCategories : [Category] = [
+      { name = "Vegetables" },
+      { name = "Dairy" },
+      { name = "Non-Veg" },
+      { name = "Disposable" },
+      { name = "Beverages" },
+      { name = "Others" },
     ];
     if (categoryType == "All") { return allCategories };
     switch (categoryType) {
       case ("Veg") { [{ name = "Vegetables" }] };
       case ("Non-Veg") { [{ name = "Non-Veg" }] };
       case ("Dairy") { [{ name = "Dairy" }] };
-      case ("Spices") { [{ name = "Spices" }] };
       case ("Beverages") { [{ name = "Beverages" }] };
+      case ("Disposable") { [{ name = "Disposable" }] };
       case (_) { [] };
     };
+  };
+
+  public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
+    userProfiles.get(user);
+  };
+
+  public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
+    userProfiles.add(caller, profile);
   };
 };
