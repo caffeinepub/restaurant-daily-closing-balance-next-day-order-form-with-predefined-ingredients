@@ -199,34 +199,34 @@ export default function RaisedConcernPage() {
 
       {/* Order Info Box */}
       <Card className="border-2 border-gray-800">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between gap-3">
+        <CardHeader className="pb-2 pt-3 px-3">
+          <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold bg-gray-900 text-white rounded px-2 py-1">
                 Order #{record.orderNo}
               </span>
-              <CardTitle className="text-lg">Raised Concern</CardTitle>
+              <CardTitle className="text-base">Raised Concern</CardTitle>
             </div>
             <Button
               size="sm"
               variant="outline"
-              className="gap-2"
+              className="gap-1 text-xs px-2 py-1 h-7"
               onClick={handleExportImage}
               data-ocid="concern.export.button"
             >
-              <Camera className="w-4 h-4" />
-              Export as Image
+              <Camera className="w-3 h-3" />
+              Export
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="pt-0">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+        <CardContent className="pt-0 px-3 pb-3">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-sm">
             <div>
               <span className="text-muted-foreground">Restaurant: </span>
               <span className="font-semibold">{record.restaurantName}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Balance Date: </span>
+              <span className="text-muted-foreground">Date: </span>
               <span className="font-semibold">
                 {formatDateDDMMYYYY(record.timestamp)}
               </span>
@@ -236,14 +236,13 @@ export default function RaisedConcernPage() {
               <span className="font-semibold">{cats.join(", ")}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Total Ingredients: </span>
+              <span className="text-muted-foreground">Items: </span>
               <span className="font-semibold">{orderItems.length}</span>
             </div>
           </div>
           {!isWithin24h && (
-            <div className="mt-3 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2">
-              ⚠️ Concern window has closed (24 hours passed). This record is
-              read-only.
+            <div className="mt-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+              ⚠️ Concern window has closed (24 hours passed). Read-only.
             </div>
           )}
         </CardContent>
@@ -255,9 +254,13 @@ export default function RaisedConcernPage() {
           <Table data-ocid="concern.table">
             <TableHeader>
               <TableRow>
-                <TableHead className="pl-4">Item Name</TableHead>
-                <TableHead className="w-28 text-center">Order Qty</TableHead>
-                <TableHead className="w-44 text-center">Status</TableHead>
+                <TableHead className="pl-2 py-2 text-xs">Item Name</TableHead>
+                <TableHead className="w-12 text-center py-2 text-xs">
+                  Qty
+                </TableHead>
+                <TableHead className="w-28 text-center py-2 text-xs">
+                  Status
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -271,20 +274,20 @@ export default function RaisedConcernPage() {
                     data-ocid={`concern.item.${rowNum}`}
                   >
                     <TableCell
-                      className={`pl-4 font-semibold ${
+                      className={`pl-2 py-1.5 text-sm font-semibold ${
                         isRejected ? "line-through text-red-500" : ""
                       }`}
                     >
                       {item.name}
                     </TableCell>
                     <TableCell
-                      className={`text-center ${
+                      className={`text-center py-1.5 text-sm ${
                         isRejected ? "line-through text-red-500" : ""
                       }`}
                     >
                       {item.nextDayOrder}
                     </TableCell>
-                    <TableCell className="text-center pr-4">
+                    <TableCell className="text-center py-1.5 pr-2">
                       {isWithin24h ? (
                         <Select
                           value={status}
@@ -293,10 +296,10 @@ export default function RaisedConcernPage() {
                           }
                         >
                           <SelectTrigger
-                            className="w-36 mx-auto"
+                            className="w-24 mx-auto h-7 text-xs px-1"
                             data-ocid={`concern.select.${rowNum}`}
                           >
-                            <SelectValue placeholder="Select..." />
+                            <SelectValue placeholder="Select" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="accepted">
@@ -309,7 +312,7 @@ export default function RaisedConcernPage() {
                         </Select>
                       ) : (
                         <span
-                          className={`text-sm font-medium ${
+                          className={`text-xs font-medium ${
                             status === "accepted"
                               ? "text-green-600"
                               : status === "rejected"

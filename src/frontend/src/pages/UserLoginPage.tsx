@@ -38,18 +38,18 @@ export default function UserLoginPage() {
       <div className="w-full max-w-sm">
         {/* Branding */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
+          <div className="w-20 h-20 rounded-2xl overflow-hidden mx-auto mb-4 shadow-md">
             <img
-              src="/assets/uploads/apple-touch-icon-3.png"
-              alt="Shri Hoshnagi"
-              className="w-12 h-12 object-contain"
+              src="/assets/uploads/logo-app-draft-2.jpg"
+              alt="Shri Hoshnagi F&B"
+              className="w-full h-full object-cover"
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = "none";
               }}
             />
           </div>
           <h1 className="text-2xl font-bold text-foreground">
-            Shri Hoshnagi Enterprises
+            Shri Hoshnagi F&amp;B
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Daily closing &amp; order tracker
@@ -130,7 +130,7 @@ export default function UserLoginPage() {
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-4">
-          © {new Date().getFullYear()} Shri Hoshnagi Enterprises
+          © {new Date().getFullYear()} Shri Hoshnagi F&amp;B
         </p>
       </div>
     </div>

@@ -31,12 +31,23 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <div className="container mx-auto px-4 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
-                <ClipboardList className="w-6 h-6 text-primary-foreground" />
+              <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
+                <img
+                  src="/assets/uploads/logo-app-draft-2.jpg"
+                  alt="Shri Hoshnagi F&B"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const el = e.target as HTMLImageElement;
+                    el.style.display = "none";
+                    el.parentElement!.classList.add("bg-primary");
+                    el.parentElement!.innerHTML =
+                      '<svg class="w-6 h-6 text-white m-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>';
+                  }}
+                />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-foreground">
-                  Shri Hoshnagi Enterprises
+                  Shri Hoshnagi F&amp;B
                 </h1>
                 {session ? (
                   <p className="text-sm text-muted-foreground">
@@ -101,7 +112,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <footer className="border-t border-border bg-card mt-auto">
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-            <p>© {new Date().getFullYear()} Shri Hoshnagi Enterprises</p>
+            <p>© {new Date().getFullYear()} Shri Hoshnagi F&amp;B</p>
             <p className="flex items-center gap-1">
               Built with <SiCoffeescript className="w-4 h-4 text-chart-1" />{" "}
               using{" "}
