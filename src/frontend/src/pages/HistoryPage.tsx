@@ -29,22 +29,20 @@ import {
   Download,
   FileText,
   Loader2,
-  LogIn,
   Search,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import BackendConnectionErrorCard from "../components/BackendConnectionErrorCard";
 import { useActorDiagnostics } from "../hooks/useActorDiagnostics";
-import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useGetAllDailyRecords } from "../hooks/useQueries";
+import { useRestaurantSession } from "../hooks/useRestaurantSession";
 import type { SavedDailyRecord } from "../types/dailyForm";
 import { exportRecordToCSV } from "../utils/csvExport";
 import { formatDateDDMMYYYY } from "../utils/dateFormat";
 import { formatRecordAsPlainText } from "../utils/recordPlainText";
 
 function getLocalDateString(ts: bigint): string {
-  // timestamp is stored in milliseconds (from Date.getTime())
   const ms = Number(ts);
   const d = new Date(ms);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -52,10 +50,12 @@ function getLocalDateString(ts: bigint): string {
 
 function filterRecords(
   records: SavedDailyRecord[],
+  restaurantName: string,
   fromDate: string,
   toDate: string,
 ): SavedDailyRecord[] {
   return records.filter((r) => {
+    if (r.restaurantName !== restaurantName) return false;
     if (fromDate || toDate) {
       const ds = getLocalDateString(r.timestamp);
       if (fromDate && ds < fromDate) return false;
@@ -66,19 +66,27 @@ function filterRecords(
 }
 
 export default function HistoryPage() {
+  const { session } = useRestaurantSession();
+  const navigate = useNavigate();
   const { data: records, isLoading, error } = useGetAllDailyRecords();
   const { hasActorError, isActorLoading, retry } = useActorDiagnostics();
-  const { identity, login, loginStatus } = useInternetIdentity();
   const [isRetrying, setIsRetrying] = useState(false);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [appliedFromDate, setAppliedFromDate] = useState("");
   const [appliedToDate, setAppliedToDate] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
-  const navigate = useNavigate();
 
-  const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
-  const isLoggingIn = loginStatus === "logging-in";
+  // Redirect to login if no session
+  useEffect(() => {
+    if (!session) {
+      navigate({ to: "/login" });
+    }
+  }, [session, navigate]);
+
+  if (!session) return null;
+
+  const restaurantName = session.restaurantName;
 
   const handleViewRecord = (recordIndex: number) => {
     navigate({
@@ -110,58 +118,13 @@ export default function HistoryPage() {
     toast.success("CSV exported!");
   };
 
-  if (!isAuthenticated && !isActorLoading) {
-    return (
-      <div className="max-w-7xl mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">Saved Records</CardTitle>
-            <CardDescription>
-              View and export your previously saved daily records
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-12" data-ocid="history.empty_state">
-              <LogIn className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-base font-semibold mb-2">
-                Sign in to view history
-              </p>
-              <p className="text-sm text-muted-foreground mb-6">
-                You need to sign in with Internet Identity to access saved
-                records.
-              </p>
-              <Button
-                onClick={login}
-                disabled={isLoggingIn}
-                className="gap-2"
-                data-ocid="history.sign_in_button"
-              >
-                {isLoggingIn ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  <>
-                    <LogIn className="w-4 h-4" />
-                    Sign In
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   if (hasActorError) {
     return (
       <div className="max-w-7xl mx-auto">
         <BackendConnectionErrorCard
           onRetry={handleRetry}
           isRetrying={isRetrying}
-          errorMessage="Failed to initialize backend connection. Please check your network and try again."
+          errorMessage="Failed to initialize backend connection."
         />
       </div>
     );
@@ -183,10 +146,12 @@ export default function HistoryPage() {
 
   const filteredRecords =
     records && hasSearched
-      ? filterRecords(records, appliedFromDate, appliedToDate)
+      ? filterRecords(records, restaurantName, appliedFromDate, appliedToDate)
       : [];
 
-  const totalRecords = records?.length ?? 0;
+  const totalRecords = records
+    ? filterRecords(records, restaurantName, "", "").length
+    : 0;
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -194,11 +159,12 @@ export default function HistoryPage() {
         <CardHeader>
           <CardTitle className="text-2xl">Saved Records</CardTitle>
           <CardDescription>
-            Select a date range and tap Search to view records
+            {restaurantName} — Select a date range and tap Search to view
+            records
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Date Range Filter Section */}
+          {/* Date Range Filter */}
           <div className="mb-5" data-ocid="history.filter.panel">
             <div
               className="flex flex-wrap gap-3 items-end p-3 bg-muted rounded-lg"
@@ -244,7 +210,10 @@ export default function HistoryPage() {
           {isLoading || isActorLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center space-y-4">
-                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground mx-auto" />
+                <Loader2
+                  className="w-8 h-8 animate-spin text-muted-foreground mx-auto"
+                  data-ocid="history.loading_state"
+                />
                 <p className="text-sm text-muted-foreground">
                   Loading records...
                 </p>
@@ -268,13 +237,12 @@ export default function HistoryPage() {
                 {totalRecords !== 1 ? "s" : ""}
               </p>
 
-              {/* Desktop Table View */}
+              {/* Desktop Table */}
               <div className="hidden sm:block overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[70px]">Order No.</TableHead>
-                      <TableHead>Restaurant</TableHead>
                       <TableHead>Balance Date</TableHead>
                       <TableHead>Categories</TableHead>
                       <TableHead>Items</TableHead>
@@ -296,9 +264,6 @@ export default function HistoryPage() {
                             #{record.orderNo}
                           </TableCell>
                           <TableCell className="font-medium">
-                            {record.restaurantName}
-                          </TableCell>
-                          <TableCell className="font-medium">
                             {formatDateDDMMYYYY(record.timestamp)}
                           </TableCell>
                           <TableCell className="text-muted-foreground text-sm">
@@ -310,7 +275,6 @@ export default function HistoryPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
-                              {/* Export Dropdown */}
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button
@@ -340,7 +304,6 @@ export default function HistoryPage() {
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
-
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -362,7 +325,7 @@ export default function HistoryPage() {
                 </Table>
               </div>
 
-              {/* Mobile Card View */}
+              {/* Mobile Cards */}
               <div className="sm:hidden space-y-3">
                 {filteredRecords.map((record, idx) => {
                   const cats = [
@@ -378,15 +341,10 @@ export default function HistoryPage() {
                       <div className="space-y-3">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold bg-gray-800 text-white rounded px-2 py-0.5">
-                                Order #{record.orderNo}
-                              </span>
-                            </div>
+                            <span className="text-xs font-bold bg-gray-800 text-white rounded px-2 py-0.5">
+                              Order #{record.orderNo}
+                            </span>
                             <div className="font-semibold text-base text-foreground mt-1">
-                              {record.restaurantName}
-                            </div>
-                            <div className="text-sm text-muted-foreground mt-0.5">
                               {formatDateDDMMYYYY(record.timestamp)}
                             </div>
                             <div className="text-xs text-muted-foreground mt-0.5">
@@ -400,7 +358,6 @@ export default function HistoryPage() {
                             {record.entries.length !== 1 ? "s" : ""}
                           </span>
                           <div className="flex gap-2">
-                            {/* Mobile Export Dropdown */}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button
@@ -430,18 +387,16 @@ export default function HistoryPage() {
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
-
                             <Button
-                              variant="default"
+                              variant="ghost"
                               size="sm"
-                              className="gap-2"
                               onClick={() =>
                                 handleViewRecord(record.recordIndex)
                               }
-                              data-ocid={`history.mobile_view_button.${cardNum}`}
+                              data-ocid={`history.view_button.${cardNum}`}
                             >
                               View
-                              <ChevronRight className="w-4 h-4" />
+                              <ChevronRight className="w-4 h-4 ml-1" />
                             </Button>
                           </div>
                         </div>
@@ -452,13 +407,13 @@ export default function HistoryPage() {
               </div>
             </>
           ) : (
-            <div className="text-center py-12" data-ocid="history.empty_state">
-              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-lg font-semibold text-foreground mb-1">
+            <div className="text-center py-14" data-ocid="history.empty_state">
+              <CalendarSearch className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-base font-semibold text-foreground mb-1">
                 No Record Found
               </p>
               <p className="text-sm text-muted-foreground">
-                No records match the selected date range.
+                No records found for the selected date range.
               </p>
             </div>
           )}

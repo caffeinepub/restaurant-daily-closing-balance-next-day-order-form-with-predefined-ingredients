@@ -8,10 +8,14 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 import { ThemeProvider } from "next-themes";
+import { useEffect } from "react";
 import AppLayout from "./components/AppLayout";
+import AdminPage from "./pages/AdminPage";
 import DailyEntryPage from "./pages/DailyEntryPage";
 import HistoryPage from "./pages/HistoryPage";
 import RecordDetailPage from "./pages/RecordDetailPage";
+import UserLoginPage from "./pages/UserLoginPage";
+import { initMasterData } from "./utils/masterData";
 
 const rootRoute = createRootRoute({
   component: () => (
@@ -49,10 +53,24 @@ const recordDetailRoute = createRoute({
   component: RecordDetailPage,
 });
 
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/login",
+  component: UserLoginPage,
+});
+
+const adminRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin",
+  component: AdminPage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   historyRoute,
   recordDetailRoute,
+  loginRoute,
+  adminRoute,
 ]);
 
 const router = createRouter({ routeTree });
@@ -63,9 +81,17 @@ declare module "@tanstack/react-router" {
   }
 }
 
+function AppInit() {
+  useEffect(() => {
+    initMasterData();
+  }, []);
+  return null;
+}
+
 export default function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <AppInit />
       <RouterProvider router={router} />
       <Toaster />
     </ThemeProvider>

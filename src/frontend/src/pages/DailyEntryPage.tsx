@@ -33,25 +33,21 @@ import {
 } from "@/components/ui/select";
 import { useNavigate } from "@tanstack/react-router";
 import { Loader2, Pencil, Plus, Save, Trash2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import BackendConnectionErrorCard from "../components/BackendConnectionErrorCard";
-import {
-  CATEGORIES,
-  PREDEFINED_INGREDIENTS,
-} from "../data/predefinedIngredients";
 import { useActorDiagnostics } from "../hooks/useActorDiagnostics";
-import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { useAddDailyRecord } from "../hooks/useQueries";
+import { useAddDailyRecord, useGetAllDailyRecords } from "../hooks/useQueries";
+import { useRestaurantSession } from "../hooks/useRestaurantSession";
 import type { IngredientEntryData } from "../types/dailyForm";
-import {
-  getCategoryBgColor,
-  getCategoryInputBgColor,
-} from "../utils/categoryColors";
 import {
   formatInputDateDDMMYYYY,
   getOrderDateFromBalanceDate,
 } from "../utils/dateFormat";
+import {
+  getMasterCategories,
+  getRawMaterialsByCategory,
+} from "../utils/masterData";
 
 // ---- Types ----
 interface CartItem {
@@ -62,17 +58,21 @@ interface CartItem {
 }
 
 export default function DailyEntryPage() {
+  const { session } = useRestaurantSession();
+  const navigate = useNavigate();
   const addRecord = useAddDailyRecord();
+  const { data: allRecords } = useGetAllDailyRecords();
   const { isActorReady, isActorLoading, hasActorError, retry } =
     useActorDiagnostics();
-  const { identity } = useInternetIdentity();
+
   const [isSaving, setIsSaving] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [balanceDate, setBalanceDate] = useState("");
-  const [restaurantName, setRestaurantName] = useState("");
-  const navigate = useNavigate();
 
-  // --- Step state ---
+  // Dynamic categories/ingredients from masterData
+  const [categories, setCategories] = useState<string[]>([]);
+
+  // Step state
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [searchText, setSearchText] = useState("");
   const [selectedIngredient, setSelectedIngredient] = useState<string>("");
@@ -80,15 +80,15 @@ export default function DailyEntryPage() {
   const [orderValue, setOrderValue] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // --- Cart ---
+  // Cart
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-  // --- View & Edit modal ---
+  // View & Edit modal
   const [showViewModal, setShowViewModal] = useState(false);
   const [modalEdits, setModalEdits] = useState<CartItem[]>([]);
 
-  // --- Duplicate alert ---
+  // Duplicate alert
   const [showDuplicateAlert, setShowDuplicateAlert] = useState(false);
   const [pendingDuplicate, setPendingDuplicate] = useState<{
     existingIndex: number;
@@ -97,16 +97,31 @@ export default function DailyEntryPage() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const addItemButtonRef = useRef<HTMLButtonElement>(null);
+  const balanceInputRef = useRef<HTMLInputElement>(null);
+  const orderInputRef = useRef<HTMLInputElement>(null);
 
-  const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
+  // Redirect to login if no session
+  useEffect(() => {
+    if (!session) {
+      navigate({ to: "/login" });
+    }
+  }, [session, navigate]);
 
-  // --- Filtered ingredient suggestions ---
+  // Load categories from masterData
+  useEffect(() => {
+    const cats = getMasterCategories().map((c) => c.name);
+    setCategories(cats);
+  }, []);
+
+  if (!session) return null;
+
+  const restaurantName = session.restaurantName;
+
+  // Filtered ingredient suggestions from masterData
   const filteredIngredients =
     selectedCategory && searchText.length > 0
-      ? PREDEFINED_INGREDIENTS.filter(
-          (ing) =>
-            ing.category === selectedCategory &&
-            ing.name.toLowerCase().includes(searchText.toLowerCase()),
+      ? getRawMaterialsByCategory(selectedCategory).filter((m) =>
+          m.name.toLowerCase().includes(searchText.toLowerCase()),
         )
       : [];
 
@@ -267,14 +282,6 @@ export default function DailyEntryPage() {
   };
 
   const handleSave = async () => {
-    if (!isAuthenticated) {
-      toast.error("Please sign in to save records.");
-      return;
-    }
-    if (!restaurantName) {
-      toast.error("Please select a Restaurant Name before saving.");
-      return;
-    }
     if (!balanceDate) {
       toast.error("Please select a Balance Date before saving.");
       return;
@@ -286,6 +293,31 @@ export default function DailyEntryPage() {
     if (cartItems.length === 0) {
       toast.error("Please add at least one ingredient before saving.");
       return;
+    }
+
+    // Per-restaurant per-category per-day restriction
+    if (allRecords && allRecords.length > 0) {
+      const balanceDateFormatted = formatInputDateDDMMYYYY(balanceDate);
+      const categoriesInCart = [
+        ...new Set(cartItems.map((item) => item.category)),
+      ];
+
+      for (const category of categoriesInCart) {
+        const conflict = allRecords.find((record) => {
+          if (record.restaurantName !== restaurantName) return false;
+          const recordDate = formatInputDateDDMMYYYY(
+            new Date(Number(record.timestamp)).toISOString().split("T")[0],
+          );
+          if (recordDate !== balanceDateFormatted) return false;
+          return record.entries.some((e) => e.category === category);
+        });
+        if (conflict) {
+          toast.error(
+            `Entry already exists for ${restaurantName} - ${category} on this date.`,
+          );
+          return;
+        }
+      }
     }
 
     const entries: IngredientEntryData[] = cartItems.map((item) => ({
@@ -306,36 +338,32 @@ export default function DailyEntryPage() {
         restaurantName,
       });
 
-      toast.success("Daily record saved successfully!");
+      toast.success("Record saved successfully!");
       setCartItems([]);
       setBalanceDate("");
-      setRestaurantName("");
       setSelectedCategory("");
       setSearchText("");
       setSelectedIngredient("");
       setBalanceValue("");
       setOrderValue("");
-      setEditingIndex(null);
-
       navigate({ to: "/history" });
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to save record. Please try again.";
-      toast.error(errorMessage);
-      console.error("Save error:", error);
-      if (error && typeof error === "object" && "originalError" in error) {
-        console.error("Original error:", (error as any).originalError);
-      }
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Failed to save record. Please try again.",
+      );
     } finally {
       setIsSaving(false);
     }
   };
 
+  const isStepDisabled = !balanceDate;
+  const orderDate = balanceDate ? getOrderDateFromBalanceDate(balanceDate) : "";
+
   if (hasActorError) {
     return (
-      <div className="max-w-2xl mx-auto bg-yellow-50 dark:bg-yellow-950/20 min-h-screen p-4">
+      <div className="max-w-2xl mx-auto">
         <BackendConnectionErrorCard
           onRetry={handleRetry}
           isRetrying={isRetrying}
@@ -345,557 +373,375 @@ export default function DailyEntryPage() {
     );
   }
 
-  const isInitializing = isActorLoading && !isActorReady;
-
   return (
-    <div className="max-w-2xl mx-auto bg-yellow-50 dark:bg-yellow-950/20 min-h-screen p-3 sm:p-4">
-      <Card className="bg-white dark:bg-gray-900">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl sm:text-2xl">
-            Daily Inventory Entry
-          </CardTitle>
+    <div className="max-w-2xl mx-auto space-y-6">
+      {/* Header Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-2xl">Daily Entry</CardTitle>
           <CardDescription>
-            Select category, search ingredient, add values — then submit
+            Restaurant: <strong>{restaurantName}</strong>
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isInitializing ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center space-y-4">
-                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground mx-auto" />
-                <p className="text-sm text-muted-foreground">
-                  Connecting to backend...
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-5">
-              {/* ── Restaurant + Date ── */}
-              <div className="bg-muted/50 p-4 rounded-lg border space-y-4">
-                <div>
-                  <Label
-                    htmlFor="restaurantName"
-                    className="text-base font-semibold"
-                  >
-                    Restaurant Name <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    value={restaurantName}
-                    onValueChange={setRestaurantName}
-                  >
-                    <SelectTrigger
-                      id="restaurantName"
-                      className={`mt-2 w-full ${!restaurantName ? "border-red-300 focus:ring-red-400" : ""}`}
-                      data-ocid="entry.select"
-                    >
-                      <SelectValue placeholder="Select restaurant (required)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Andaaz" className="text-lg font-bold">
-                        Andaaz
-                      </SelectItem>
-                      <SelectItem
-                        value="Kai wok Express"
-                        className="text-lg font-bold"
-                      >
-                        Kai wok Express
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {!restaurantName && (
-                    <p className="text-xs text-red-500 mt-1">
-                      Required to proceed
-                    </p>
-                  )}
-                </div>
+          {/* Step 0: Balance Date */}
+          <div className="space-y-2 mb-4">
+            <Label htmlFor="balance-date" className="text-sm font-semibold">
+              Balance Date <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="balance-date"
+              type="date"
+              value={balanceDate}
+              onChange={(e) => setBalanceDate(e.target.value)}
+              className="w-full sm:w-56"
+              data-ocid="entry.date.input"
+            />
+            {orderDate && (
+              <p className="text-xs text-muted-foreground">
+                Order Date: <strong>{orderDate}</strong>
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-                <div>
-                  <Label
-                    htmlFor="balanceDate"
-                    className="text-base font-semibold"
-                  >
-                    Balance Date <span className="text-red-500">*</span>
-                  </Label>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2">
-                    <Input
-                      id="balanceDate"
-                      type="date"
-                      value={balanceDate}
-                      onChange={(e) => setBalanceDate(e.target.value)}
-                      className={`w-full sm:max-w-[10rem] ${!balanceDate ? "border-red-300 focus:ring-red-400" : ""}`}
-                      data-ocid="entry.input"
-                    />
-                    {balanceDate && (
-                      <span className="text-sm font-medium text-foreground">
-                        {formatInputDateDDMMYYYY(balanceDate)}
-                      </span>
-                    )}
-                  </div>
-                  {!balanceDate && (
-                    <p className="text-xs text-red-500 mt-1">
-                      Required to proceed
-                    </p>
-                  )}
-                  {balanceDate && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Order Date:{" "}
-                      <span className="font-semibold text-foreground">
-                        {getOrderDateFromBalanceDate(balanceDate)}
-                      </span>{" "}
-                      (Balance Date + 1)
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Mandatory fields warning banner */}
-              {(!restaurantName || !balanceDate) && (
-                <div className="flex items-start gap-2 bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 text-sm text-amber-800">
-                  <span className="font-bold shrink-0">⚠</span>
-                  <span>
-                    Please select <strong>Restaurant Name</strong> and{" "}
-                    <strong>Balance Date</strong> above before adding
-                    ingredients.
-                  </span>
-                </div>
-              )}
-
-              {/* ── Step 1: Category Selection — Select box matching Restaurant Name style ── */}
-              <div
-                className={`space-y-2 ${
-                  !restaurantName || !balanceDate
-                    ? "opacity-40 pointer-events-none select-none"
-                    : ""
-                }`}
+      {/* Step 1+2: Category & Ingredient Search */}
+      <Card className={isStepDisabled ? "opacity-50 pointer-events-none" : ""}>
+        <CardHeader>
+          <CardTitle className="text-base">Step 1: Select Category</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Category Select */}
+          <div>
+            <Label className="text-sm font-semibold mb-1 block">Category</Label>
+            <Select
+              value={selectedCategory}
+              onValueChange={handleCategorySelect}
+              disabled={isStepDisabled}
+            >
+              <SelectTrigger
+                className="w-full"
+                data-ocid="entry.category.select"
               >
-                <Label className="text-base font-semibold">
-                  Step 1: Select Category
-                </Label>
-                <Select
-                  value={selectedCategory}
-                  onValueChange={handleCategorySelect}
-                >
-                  <SelectTrigger
-                    className="mt-1 w-full"
-                    data-ocid="category.select"
-                  >
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((cat) => (
-                      <SelectItem
-                        key={cat}
-                        value={cat}
-                        className="text-lg font-bold"
-                      >
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Step 2: Search & Add */}
+          {selectedCategory && (
+            <div>
+              <CardTitle className="text-base mb-3">
+                Step 2: Search &amp; Add
+              </CardTitle>
+
+              {/* Fixed Balance/Order inputs */}
+              <div className="flex gap-3 mb-3">
+                <div className="flex-1">
+                  <Label className="text-xs font-semibold">Balance</Label>
+                  <Input
+                    ref={balanceInputRef}
+                    type="number"
+                    inputMode="decimal"
+                    value={balanceValue}
+                    onChange={(e) => setBalanceValue(e.target.value)}
+                    placeholder="0"
+                    min="0"
+                    step="any"
+                    data-ocid="entry.balance.input"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        orderInputRef.current?.focus();
+                      }
+                    }}
+                  />
+                </div>
+                <div className="flex-1">
+                  <Label className="text-xs font-semibold">Order</Label>
+                  <Input
+                    ref={orderInputRef}
+                    type="number"
+                    inputMode="decimal"
+                    value={orderValue}
+                    onChange={(e) => setOrderValue(e.target.value)}
+                    placeholder="0"
+                    min="0"
+                    step="any"
+                    data-ocid="entry.order.input"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddItem();
+                      }
+                    }}
+                  />
+                </div>
               </div>
 
-              {/* ── Step 2: Search & Add ── */}
-              <div
-                className={`rounded-lg border transition-all ${
-                  selectedCategory
-                    ? `${getCategoryBgColor(selectedCategory)} p-4`
-                    : "p-4 bg-muted/20 border-dashed"
-                }`}
-              >
-                <Label className="text-base font-semibold block mb-3">
-                  Step 2: Search & Add
-                  {selectedCategory && (
-                    <>
-                      {" — "}
-                      <span className="font-normal italic">
-                        {selectedCategory}
-                      </span>
-                    </>
-                  )}
-                </Label>
-
-                {!selectedCategory ? (
-                  <p className="text-sm text-muted-foreground text-center py-3">
-                    Select a category above to search ingredients
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {/* Search box with dropdown rendered ABOVE */}
-                    <div className="relative">
-                      {showDropdown && filteredIngredients.length > 0 && (
-                        <div className="absolute z-50 w-full bottom-full mb-1 bg-[#111111] border border-gray-700 rounded-lg shadow-lg max-h-52 overflow-y-auto">
-                          {filteredIngredients.map((ing) => (
-                            <button
-                              key={ing.name}
-                              type="button"
-                              className="w-full text-left px-4 py-3 text-sm font-bold text-white bg-[#111111] hover:bg-[#222222] transition-colors border-b border-gray-700 last:border-b-0"
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                handleSelectIngredient(ing.name);
-                              }}
-                            >
-                              {ing.name}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      {showDropdown &&
-                        searchText.length > 0 &&
-                        filteredIngredients.length === 0 && (
-                          <div className="absolute z-50 w-full bottom-full mb-1 bg-white dark:bg-gray-800 border border-border rounded-lg shadow-md px-4 py-3 text-sm text-muted-foreground">
-                            No ingredients found matching "{searchText}"
-                          </div>
-                        )}
-                      <Input
-                        ref={searchInputRef}
-                        type="text"
-                        inputMode="text"
-                        placeholder="Type to search ingredients..."
-                        value={searchText}
-                        onChange={(e) => handleSearchChange(e.target.value)}
-                        onFocus={() => {
-                          if (searchText.length > 0) setShowDropdown(true);
-                          // After keyboard animates in (~350ms), scroll the Add Item button into view
-                          setTimeout(() => {
-                            addItemButtonRef.current?.scrollIntoView({
-                              behavior: "smooth",
-                              block: "nearest",
-                            });
-                          }, 350);
+              {/* Search with results ABOVE */}
+              <div className="relative">
+                {showDropdown && filteredIngredients.length > 0 && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 bg-gray-950 border border-gray-800 rounded-lg shadow-xl z-50 max-h-56 overflow-y-auto">
+                    {filteredIngredients.map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        className="w-full text-left px-4 py-2.5 text-white font-bold text-sm hover:bg-gray-800 transition-colors"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          handleSelectIngredient(m.name);
                         }}
-                        onBlur={() =>
-                          setTimeout(() => setShowDropdown(false), 150)
-                        }
-                        className={`w-full text-base ${getCategoryInputBgColor(selectedCategory)}`}
-                        autoComplete="off"
-                        data-ocid="entry.search_input"
-                      />
-                    </div>
-
-                    {/* Selected ingredient badge */}
-                    <div className="min-h-[2.25rem] flex items-center">
-                      {selectedIngredient ? (
-                        <div
-                          className={`text-sm font-semibold px-3 py-2 rounded-md inline-block ${getCategoryInputBgColor(selectedCategory)}`}
-                        >
-                          ✓ {selectedIngredient}
-                          {editingIndex !== null && (
-                            <span className="ml-2 text-xs text-muted-foreground">
-                              (editing)
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground italic">
-                          No ingredient selected yet
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Balance + Order inputs */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-sm font-medium mb-1 block">
-                          Balance
-                        </Label>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          min="0"
-                          step="0.01"
-                          value={balanceValue}
-                          onChange={(e) => setBalanceValue(e.target.value)}
-                          className={`w-full ${getCategoryInputBgColor(selectedCategory)}`}
-                          data-ocid="entry.balance.input"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium mb-1 block">
-                          Order
-                        </Label>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          min="0"
-                          step="0.01"
-                          value={orderValue}
-                          onChange={(e) => setOrderValue(e.target.value)}
-                          className={`w-full ${getCategoryInputBgColor(selectedCategory)}`}
-                          data-ocid="entry.order.input"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Add Item button */}
-                    <Button
-                      ref={addItemButtonRef}
-                      type="button"
-                      className="w-full gap-2 font-bold text-lg bg-[#001a4d] hover:bg-[#00123a] text-white"
-                      onClick={handleAddItem}
-                      disabled={!selectedIngredient}
-                      data-ocid="entry.primary_button"
-                    >
-                      <Plus className="w-4 h-4" />
-                      {editingIndex !== null ? "Update Item" : "+ Add Item"}
-                    </Button>
+                      >
+                        {m.name}
+                      </button>
+                    ))}
                   </div>
                 )}
+                <Input
+                  ref={searchInputRef}
+                  value={searchText}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onFocus={() => searchText.length > 0 && setShowDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+                  placeholder="Type to search ingredient..."
+                  data-ocid="entry.search.input"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (
+                        filteredIngredients.length > 0 &&
+                        !selectedIngredient
+                      ) {
+                        handleSelectIngredient(filteredIngredients[0].name);
+                      } else {
+                        balanceInputRef.current?.focus();
+                      }
+                    }
+                  }}
+                />
               </div>
 
-              {/* ── Cart list ── */}
-              {cartItems.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-base font-semibold">
-                      Added Items ({cartItems.length})
-                    </Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
-                      onClick={handleOpenViewModal}
-                      data-ocid="entry.open_modal_button"
-                    >
-                      <Pencil className="w-3 h-3" />
-                      View &amp; Edit
-                    </Button>
-                  </div>
-
-                  <div className="rounded-lg border divide-y overflow-hidden">
-                    {cartItems.map((item, idx) => (
-                      <div
-                        key={`${item.name}-${idx}`}
-                        className={`flex items-center gap-2 px-3 py-2.5 ${getCategoryBgColor(item.category)}`}
-                        data-ocid={`cart.item.${idx + 1}`}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-sm truncate">
-                            {item.name}
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-0.5">
-                            Bal:{" "}
-                            <span className="font-medium text-foreground">
-                              {item.closingBalance}
-                            </span>
-                            {" · "}
-                            Order:{" "}
-                            <span className="font-medium text-foreground">
-                              {item.nextDayOrder}
-                            </span>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleEditItem(idx)}
-                          className="p-1.5 rounded-md hover:bg-white/60 transition-colors"
-                          aria-label="Edit item"
-                          data-ocid={`cart.edit_button.${idx + 1}`}
-                        >
-                          <Pencil className="w-3.5 h-3.5 text-blue-600" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteItem(idx)}
-                          className="p-1.5 rounded-md hover:bg-white/60 transition-colors"
-                          aria-label="Delete item"
-                          data-ocid={`cart.delete_button.${idx + 1}`}
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {cartItems.length === 0 && restaurantName && balanceDate && (
-                <div
-                  className="text-center py-4 text-sm text-muted-foreground border rounded-lg bg-muted/30"
-                  data-ocid="cart.empty_state"
-                >
-                  No items added yet — search and add ingredients above
-                </div>
-              )}
-
-              {/* ── Save Record button ── */}
-              <div className="pt-2">
-                <Button
-                  onClick={handleSave}
-                  disabled={isSaving || cartItems.length === 0}
-                  className="gap-2 w-full bg-[#000000] hover:bg-[#0a0a0a] text-white border border-[#111]"
-                  data-ocid="entry.save_button"
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      Save Record ({cartItems.length} item
-                      {cartItems.length !== 1 ? "s" : ""})
-                    </>
-                  )}
-                </Button>
-              </div>
+              {/* Add Item Button */}
+              <Button
+                ref={addItemButtonRef}
+                onClick={handleAddItem}
+                className="w-full mt-3 bg-navy-700 hover:bg-navy-800 text-white font-bold text-base gap-2"
+                style={{ background: "#1a3a5c" }}
+                data-ocid="entry.add.primary_button"
+                onFocus={() =>
+                  addItemButtonRef.current?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "nearest",
+                  })
+                }
+              >
+                <Plus className="w-4 h-4" />
+                {editingIndex !== null ? "Update Item" : "+ Add Item"}
+              </Button>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* ── Duplicate Entry Alert ── */}
+      {/* Cart */}
+      {cartItems.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">
+                Cart ({cartItems.length} item{cartItems.length !== 1 ? "s" : ""}
+                )
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleOpenViewModal}
+                data-ocid="entry.view_edit.button"
+              >
+                View &amp; Edit
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {cartItems.map((item, idx) => (
+                <div
+                  key={`${item.name}-${idx}`}
+                  className="flex items-center gap-2 p-2 rounded-lg bg-muted"
+                  data-ocid={`entry.cart.item.${idx + 1}`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm truncate">
+                      {item.name}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {item.category} · Bal: {item.closingBalance} · Ord:{" "}
+                      {item.nextDayOrder}
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEditItem(idx)}
+                    data-ocid={`entry.cart.edit_button.${idx + 1}`}
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteItem(idx)}
+                    data-ocid={`entry.cart.delete_button.${idx + 1}`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            <Button
+              className="w-full mt-4 gap-2 font-bold"
+              style={{ background: "#111", color: "white" }}
+              onClick={handleSave}
+              disabled={isSaving || isActorLoading}
+              data-ocid="entry.save.primary_button"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" /> Save Record
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Duplicate Alert */}
       <AlertDialog
         open={showDuplicateAlert}
         onOpenChange={setShowDuplicateAlert}
       >
-        <AlertDialogContent className="border-2 border-red-500">
+        <AlertDialogContent
+          className="border-2 border-destructive"
+          data-ocid="entry.duplicate.modal"
+        >
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-red-600 font-bold">
-              Duplicate Entry
-            </AlertDialogTitle>
+            <AlertDialogTitle>Duplicate Entry</AlertDialogTitle>
             <AlertDialogDescription>
-              <span className="font-semibold text-foreground">
-                {pendingDuplicate?.newItem.name}
-              </span>{" "}
-              is already in your list. Do you want to add the quantities to the
-              existing entry?
-              {pendingDuplicate && (
-                <span className="block mt-2 text-sm">
-                  Existing — Bal:{" "}
-                  {cartItems[pendingDuplicate.existingIndex]?.closingBalance ??
-                    0}
-                  {" · "}
-                  Order:{" "}
-                  {cartItems[pendingDuplicate.existingIndex]?.nextDayOrder ?? 0}
-                  <br />
-                  New — Bal: {pendingDuplicate.newItem.closingBalance}
-                  {" · "}
-                  Order: {pendingDuplicate.newItem.nextDayOrder}
-                </span>
-              )}
+              <strong>{pendingDuplicate?.newItem.name}</strong> is already in
+              your cart. Combine the quantities?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel
               onClick={handleDuplicateCancel}
-              data-ocid="duplicate.cancel_button"
+              data-ocid="entry.duplicate.cancel_button"
             >
-              Cancel
+              Keep Separate
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDuplicateConfirm}
-              className="bg-red-600 hover:bg-red-700"
-              data-ocid="duplicate.confirm_button"
+              data-ocid="entry.duplicate.confirm_button"
             >
-              Combine Quantities
+              Combine
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ── View & Edit Modal ── */}
-      <Dialog
-        open={showViewModal}
-        onOpenChange={setShowViewModal}
-        data-ocid="entry.dialog"
-      >
-        <DialogContent className="max-w-lg w-[96vw] max-h-[85vh] overflow-hidden flex flex-col">
+      {/* View & Edit Modal */}
+      <Dialog open={showViewModal} onOpenChange={setShowViewModal}>
+        <DialogContent
+          className="max-w-lg max-h-[80vh] overflow-y-auto"
+          data-ocid="entry.viewedit.dialog"
+        >
           <DialogHeader>
-            <DialogTitle>View &amp; Edit Items</DialogTitle>
+            <DialogTitle>Review Cart</DialogTitle>
           </DialogHeader>
-
-          <div className="flex-1 overflow-y-auto space-y-2 py-2 pr-1">
-            {modalEdits.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                No items added yet.
-              </p>
-            )}
+          <div className="space-y-3">
             {modalEdits.map((item, idx) => (
               <div
-                key={`modal-${item.name}-${idx}`}
-                className={`rounded-lg border px-3 py-3 space-y-2 ${getCategoryBgColor(item.category)}`}
+                key={`${item.name}-${idx}`}
+                className="p-3 rounded-lg border border-border space-y-2"
               >
                 <div className="font-semibold text-sm">{item.name}</div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs mb-1 block">Balance</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={modalEdits[idx].closingBalance || ""}
-                      placeholder="0"
-                      onChange={(e) => {
-                        const val =
-                          e.target.value !== ""
-                            ? Number.parseFloat(e.target.value)
-                            : 0;
-                        setModalEdits((prev) => {
-                          const updated = [...prev];
-                          updated[idx] = {
-                            ...updated[idx],
-                            closingBalance: val,
-                          };
-                          return updated;
-                        });
-                      }}
-                      className={`h-8 text-sm ${getCategoryInputBgColor(item.category)}`}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs mb-1 block">Order</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={modalEdits[idx].nextDayOrder || ""}
-                      placeholder="0"
-                      onChange={(e) => {
-                        const val =
-                          e.target.value !== ""
-                            ? Number.parseFloat(e.target.value)
-                            : 0;
-                        setModalEdits((prev) => {
-                          const updated = [...prev];
-                          updated[idx] = { ...updated[idx], nextDayOrder: val };
-                          return updated;
-                        });
-                      }}
-                      className={`h-8 text-sm ${getCategoryInputBgColor(item.category)}`}
-                    />
-                  </div>
+                <div className="text-xs text-muted-foreground">
+                  {item.category}
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setModalEdits((prev) => prev.filter((_, i) => i !== idx))
-                  }
-                  className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 transition-colors"
-                  data-ocid={`modal.delete_button.${idx + 1}`}
-                >
-                  <Trash2 className="w-3 h-3" />
-                  Remove
-                </button>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Label className="text-xs">Balance</Label>
+                    <Input
+                      type="number"
+                      value={modalEdits[idx].closingBalance}
+                      onChange={(e) => {
+                        const updated = [...modalEdits];
+                        updated[idx] = {
+                          ...updated[idx],
+                          closingBalance: Number(e.target.value),
+                        };
+                        setModalEdits(updated);
+                      }}
+                      data-ocid={`entry.viewedit.balance.input.${idx + 1}`}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Label className="text-xs">Order</Label>
+                    <Input
+                      type="number"
+                      value={modalEdits[idx].nextDayOrder}
+                      onChange={(e) => {
+                        const updated = [...modalEdits];
+                        updated[idx] = {
+                          ...updated[idx],
+                          nextDayOrder: Number(e.target.value),
+                        };
+                        setModalEdits(updated);
+                      }}
+                      data-ocid={`entry.viewedit.order.input.${idx + 1}`}
+                    />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-5"
+                    onClick={() =>
+                      setModalEdits((prev) => prev.filter((_, i) => i !== idx))
+                    }
+                    data-ocid={`entry.viewedit.delete_button.${idx + 1}`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
-
-          <div className="flex gap-2 pt-3 border-t">
+          <div className="flex gap-2 pt-2">
             <Button
               variant="outline"
-              className="flex-1"
               onClick={() => setShowViewModal(false)}
-              data-ocid="entry.cancel_button"
+              className="flex-1"
+              data-ocid="entry.viewedit.cancel_button"
             >
               Cancel
             </Button>
             <Button
-              className="flex-1"
               onClick={handleModalSave}
-              data-ocid="entry.confirm_button"
+              className="flex-1"
+              data-ocid="entry.viewedit.save_button"
             >
               Save Changes
             </Button>

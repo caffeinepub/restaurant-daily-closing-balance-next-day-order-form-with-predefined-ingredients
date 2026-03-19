@@ -1,10 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { APP_VERSION } from "@/config/appVersion";
-import { Link, useRouterState } from "@tanstack/react-router";
-import { ClipboardList, History } from "lucide-react";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { ClipboardList, History, LogOut, Shield } from "lucide-react";
+import { useEffect, useState } from "react";
 import { SiCoffeescript } from "react-icons/si";
-import AuthButton from "./AuthButton";
+import { useActor } from "../hooks/useActor";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
+import { useRestaurantSession } from "../hooks/useRestaurantSession";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -13,6 +15,34 @@ interface AppLayoutProps {
 export default function AppLayout({ children }: AppLayoutProps) {
   const router = useRouterState();
   const currentPath = router.location.pathname;
+  const { session, logout } = useRestaurantSession();
+  const { identity } = useInternetIdentity();
+  const { actor } = useActor();
+  const navigate = useNavigate();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const isIIConnected = !!identity && !identity.getPrincipal().isAnonymous();
+
+  useEffect(() => {
+    if (!isIIConnected || !actor) {
+      setIsAdmin(false);
+      return;
+    }
+    actor
+      .isCallerAdmin()
+      .then(setIsAdmin)
+      .catch(() => setIsAdmin(false));
+  }, [isIIConnected, actor]);
+
+  // Login page: render minimal wrapper
+  if (currentPath === "/login") {
+    return <>{children}</>;
+  }
+
+  const handleLogout = () => {
+    logout();
+    navigate({ to: "/login" });
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -27,15 +57,32 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 <h1 className="text-xl font-bold text-foreground">
                   Shri Hoshnagi Enterprises
                 </h1>
-                <p className="text-sm text-muted-foreground">
-                  Daily closing & order tracker
-                </p>
+                {session ? (
+                  <p className="text-sm text-muted-foreground">
+                    {session.restaurantName}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Daily closing &amp; order tracker
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-3 flex-wrap">
-              <AuthButton />
+              {session && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={handleLogout}
+                  data-ocid="layout.logout.button"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </Button>
+              )}
               <div className="text-xs text-muted-foreground font-mono">
-                Version {APP_VERSION}
+                v{APP_VERSION}
               </div>
             </div>
           </div>
@@ -45,6 +92,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 variant={currentPath === "/" ? "default" : "ghost"}
                 size="sm"
                 className="gap-2"
+                data-ocid="nav.daily_entry.link"
               >
                 <ClipboardList className="w-4 h-4" />
                 Daily Entry
@@ -57,11 +105,28 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 }
                 size="sm"
                 className="gap-2"
+                data-ocid="nav.history.link"
               >
                 <History className="w-4 h-4" />
                 History
               </Button>
             </Link>
+            {/* Admin link: desktop only, requires Internet Identity */}
+            {isIIConnected && isAdmin && (
+              <div className="hidden md:block">
+                <Link to="/admin">
+                  <Button
+                    variant={currentPath === "/admin" ? "default" : "ghost"}
+                    size="sm"
+                    className="gap-2"
+                    data-ocid="nav.admin.link"
+                  >
+                    <Shield className="w-4 h-4" />
+                    Admin
+                  </Button>
+                </Link>
+              </div>
+            )}
           </nav>
         </div>
       </header>
