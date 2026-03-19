@@ -41,18 +41,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Link } from "@tanstack/react-router";
 import {
-  Loader2,
-  LogIn,
+  Eye,
+  EyeOff,
+  KeyRound,
+  LogOut,
   Pencil,
   Plus,
   ShieldAlert,
+  ShieldCheck,
   Trash2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useActor } from "../hooks/useActor";
-import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   type MasterCategory,
   type RawMaterial,
@@ -71,11 +73,15 @@ import {
   getRestaurants,
   getUsers,
   initMasterData,
+  setAdminPassword,
   updateCategory,
   updateRawMaterial,
   updateRestaurant,
   updateUser,
+  verifyAdminPassword,
 } from "../utils/masterData";
+
+const ADMIN_SESSION_KEY = "hoshnagi_admin_session";
 
 // ─── Restaurant Master Tab ───────────────────────────────────────────────────
 
@@ -83,22 +89,16 @@ function RestaurantMasterTab() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [users, setUsers] = useState<RestaurantUser[]>([]);
 
-  // Add/Edit Restaurant
   const [showRestDialog, setShowRestDialog] = useState(false);
   const [editingRest, setEditingRest] = useState<Restaurant | null>(null);
   const [restName, setRestName] = useState("");
-
-  // Delete Restaurant
   const [deleteRestId, setDeleteRestId] = useState<string | null>(null);
 
-  // Add/Edit User
   const [showUserDialog, setShowUserDialog] = useState(false);
   const [editingUser, setEditingUser] = useState<RestaurantUser | null>(null);
   const [uUsername, setUUsername] = useState("");
   const [uPassword, setUPassword] = useState("");
   const [uRestaurant, setURestaurant] = useState("");
-
-  // Delete User
   const [deleteUsername, setDeleteUsername] = useState<string | null>(null);
 
   const reload = () => {
@@ -106,7 +106,6 @@ function RestaurantMasterTab() {
     setUsers(getUsers());
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     setRestaurants(getRestaurants());
     setUsers(getUsers());
@@ -117,13 +116,11 @@ function RestaurantMasterTab() {
     setRestName("");
     setShowRestDialog(true);
   };
-
   const openEditRest = (r: Restaurant) => {
     setEditingRest(r);
     setRestName(r.name);
     setShowRestDialog(true);
   };
-
   const saveRest = () => {
     if (!restName.trim()) return;
     if (editingRest) {
@@ -136,7 +133,6 @@ function RestaurantMasterTab() {
     setShowRestDialog(false);
     reload();
   };
-
   const confirmDeleteRest = () => {
     if (!deleteRestId) return;
     deleteRestaurant(deleteRestId);
@@ -152,7 +148,6 @@ function RestaurantMasterTab() {
     setURestaurant("");
     setShowUserDialog(true);
   };
-
   const openEditUser = (u: RestaurantUser) => {
     setEditingUser(u);
     setUUsername(u.username);
@@ -160,7 +155,6 @@ function RestaurantMasterTab() {
     setURestaurant(u.restaurantName);
     setShowUserDialog(true);
   };
-
   const saveUser = () => {
     if (!uUsername.trim() || !uPassword.trim() || !uRestaurant) return;
     if (editingUser) {
@@ -173,7 +167,6 @@ function RestaurantMasterTab() {
     setShowUserDialog(false);
     reload();
   };
-
   const confirmDeleteUser = () => {
     if (!deleteUsername) return;
     deleteUser(deleteUsername);
@@ -184,7 +177,6 @@ function RestaurantMasterTab() {
 
   return (
     <div className="space-y-8">
-      {/* Restaurants */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base font-semibold">Restaurants</h3>
@@ -248,7 +240,6 @@ function RestaurantMasterTab() {
         </Table>
       </div>
 
-      {/* User Credentials */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base font-semibold">User Credentials</h3>
@@ -314,7 +305,6 @@ function RestaurantMasterTab() {
         </Table>
       </div>
 
-      {/* Restaurant Dialog */}
       <Dialog open={showRestDialog} onOpenChange={setShowRestDialog}>
         <DialogContent data-ocid="admin.restaurant.dialog">
           <DialogHeader>
@@ -347,7 +337,6 @@ function RestaurantMasterTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Restaurant Confirm */}
       <AlertDialog
         open={!!deleteRestId}
         onOpenChange={(o) => !o && setDeleteRestId(null)}
@@ -373,7 +362,6 @@ function RestaurantMasterTab() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* User Dialog */}
       <Dialog open={showUserDialog} onOpenChange={setShowUserDialog}>
         <DialogContent data-ocid="admin.user.dialog">
           <DialogHeader>
@@ -431,7 +419,6 @@ function RestaurantMasterTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete User Confirm */}
       <AlertDialog
         open={!!deleteUsername}
         onOpenChange={(o) => !o && setDeleteUsername(null)}
@@ -466,19 +453,16 @@ function RawMaterialMasterTab() {
   const [materials, setMaterials] = useState<RawMaterial[]>([]);
   const [categories, setCategories] = useState<MasterCategory[]>([]);
   const [filterCat, setFilterCat] = useState("all");
-
   const [showDialog, setShowDialog] = useState(false);
   const [editingMat, setEditingMat] = useState<RawMaterial | null>(null);
   const [matName, setMatName] = useState("");
   const [matCategory, setMatCategory] = useState("");
-
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const reload = () => {
     setMaterials(getRawMaterials());
     setCategories(getMasterCategories());
   };
-
   useEffect(() => {
     setMaterials(getRawMaterials());
     setCategories(getMasterCategories());
@@ -490,14 +474,12 @@ function RawMaterialMasterTab() {
     setMatCategory("");
     setShowDialog(true);
   };
-
   const openEdit = (m: RawMaterial) => {
     setEditingMat(m);
     setMatName(m.name);
     setMatCategory(m.category);
     setShowDialog(true);
   };
-
   const save = () => {
     if (!matName.trim() || !matCategory) return;
     if (editingMat) {
@@ -510,7 +492,6 @@ function RawMaterialMasterTab() {
     setShowDialog(false);
     reload();
   };
-
   const confirmDelete = () => {
     if (!deleteId) return;
     deleteRawMaterial(deleteId);
@@ -549,7 +530,6 @@ function RawMaterialMasterTab() {
           <Plus className="w-4 h-4" /> Add Raw Material
         </Button>
       </div>
-
       <Table data-ocid="admin.rawmaterial.table">
         <TableHeader>
           <TableRow>
@@ -598,7 +578,6 @@ function RawMaterialMasterTab() {
           ))}
         </TableBody>
       </Table>
-
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent data-ocid="admin.rawmaterial.dialog">
           <DialogHeader>
@@ -646,7 +625,6 @@ function RawMaterialMasterTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       <AlertDialog
         open={!!deleteId}
         onOpenChange={(o) => !o && setDeleteId(null)}
@@ -685,7 +663,6 @@ function CategoryMasterTab() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const reload = () => setCategories(getMasterCategories());
-
   useEffect(() => {
     setCategories(getMasterCategories());
   }, []);
@@ -695,13 +672,11 @@ function CategoryMasterTab() {
     setCatName("");
     setShowDialog(true);
   };
-
   const openEdit = (c: MasterCategory) => {
     setEditingCat(c);
     setCatName(c.name);
     setShowDialog(true);
   };
-
   const save = () => {
     if (!catName.trim()) return;
     if (editingCat) {
@@ -714,7 +689,6 @@ function CategoryMasterTab() {
     setShowDialog(false);
     reload();
   };
-
   const confirmDelete = () => {
     if (!deleteId) return;
     deleteCategory(deleteId);
@@ -735,7 +709,6 @@ function CategoryMasterTab() {
           <Plus className="w-4 h-4" /> Add Category
         </Button>
       </div>
-
       <Table data-ocid="admin.category.table">
         <TableHeader>
           <TableRow>
@@ -782,7 +755,6 @@ function CategoryMasterTab() {
           ))}
         </TableBody>
       </Table>
-
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent data-ocid="admin.category.dialog">
           <DialogHeader>
@@ -814,7 +786,6 @@ function CategoryMasterTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       <AlertDialog
         open={!!deleteId}
         onOpenChange={(o) => !o && setDeleteId(null)}
@@ -843,36 +814,186 @@ function CategoryMasterTab() {
   );
 }
 
+// ─── Settings Tab ─────────────────────────────────────────────────────────────
+
+function SettingsTab() {
+  const [currentPwd, setCurrentPwd] = useState("");
+  const [newPwd, setNewPwd] = useState("");
+  const [confirmPwd, setConfirmPwd] = useState("");
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = () => {
+    setError("");
+    if (!verifyAdminPassword(currentPwd)) {
+      setError("Current password is incorrect.");
+      return;
+    }
+    if (newPwd.length < 6) {
+      setError("New password must be at least 6 characters.");
+      return;
+    }
+    if (newPwd !== confirmPwd) {
+      setError("New password and confirmation do not match.");
+      return;
+    }
+    setAdminPassword(newPwd);
+    toast.success("Password updated successfully");
+    setCurrentPwd("");
+    setNewPwd("");
+    setConfirmPwd("");
+  };
+
+  return (
+    <div className="max-w-md space-y-6">
+      <div>
+        <h3 className="text-base font-semibold mb-1">Change Admin Password</h3>
+        <p className="text-sm text-muted-foreground">
+          Update the password used to access this admin panel.
+        </p>
+      </div>
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="current-pwd">Current Password</Label>
+          <div className="relative">
+            <Input
+              id="current-pwd"
+              type={showCurrent ? "text" : "password"}
+              value={currentPwd}
+              onChange={(e) => setCurrentPwd(e.target.value)}
+              placeholder="Enter current password"
+              data-ocid="admin.settings.input"
+              className="pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowCurrent((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              tabIndex={-1}
+            >
+              {showCurrent ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="new-pwd">New Password</Label>
+          <div className="relative">
+            <Input
+              id="new-pwd"
+              type={showNew ? "text" : "password"}
+              value={newPwd}
+              onChange={(e) => setNewPwd(e.target.value)}
+              placeholder="At least 6 characters"
+              data-ocid="admin.settings.input"
+              className="pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowNew((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              tabIndex={-1}
+            >
+              {showNew ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="confirm-pwd">Confirm New Password</Label>
+          <div className="relative">
+            <Input
+              id="confirm-pwd"
+              type={showConfirm ? "text" : "password"}
+              value={confirmPwd}
+              onChange={(e) => setConfirmPwd(e.target.value)}
+              placeholder="Repeat new password"
+              data-ocid="admin.settings.input"
+              className="pr-10"
+              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirm((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              tabIndex={-1}
+            >
+              {showConfirm ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {error && (
+          <p
+            className="text-sm text-destructive"
+            data-ocid="admin.settings.error_state"
+          >
+            {error}
+          </p>
+        )}
+
+        <Button
+          onClick={handleSubmit}
+          className="gap-2"
+          data-ocid="admin.settings.submit_button"
+        >
+          <KeyRound className="w-4 h-4" /> Update Password
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main AdminPage ───────────────────────────────────────────────────────────
 
 export default function AdminPage() {
-  const { identity, login, loginStatus } = useInternetIdentity();
-  const { actor } = useActor();
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const isLoggingIn = loginStatus === "logging-in";
-  const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return sessionStorage.getItem(ADMIN_SESSION_KEY) === "true";
+  });
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginError, setLoginError] = useState("");
 
-  // Check if on mobile (PWA standalone)
+  // Check if on mobile
   const isMobile =
     typeof window !== "undefined" &&
     window.matchMedia("(max-width: 768px)").matches;
 
   useEffect(() => {
-    if (!isAuthenticated || !actor) {
-      setIsAdmin(null);
-      return;
-    }
-    actor
-      .isCallerAdmin()
-      .then(setIsAdmin)
-      .catch(() => setIsAdmin(false));
-  }, [isAuthenticated, actor]);
-
-  useEffect(() => {
-    if (isAdmin === true) {
+    if (isAuthenticated) {
       initMasterData();
     }
-  }, [isAdmin]);
+  }, [isAuthenticated]);
+
+  const handleLogin = () => {
+    setLoginError("");
+    if (verifyAdminPassword(password)) {
+      sessionStorage.setItem(ADMIN_SESSION_KEY, "true");
+      setIsAuthenticated(true);
+      setPassword("");
+    } else {
+      setLoginError("Incorrect password. Please try again.");
+    }
+  };
+
+  const handleSignOut = () => {
+    sessionStorage.removeItem(ADMIN_SESSION_KEY);
+    setIsAuthenticated(false);
+  };
 
   if (isMobile) {
     return (
@@ -892,58 +1013,71 @@ export default function AdminPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle>Admin Panel</CardTitle>
-            <CardDescription>
-              Sign in with Internet Identity to access the admin panel.
-            </CardDescription>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="w-full max-w-sm">
+          <CardHeader className="text-center pb-2">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              <ShieldCheck className="w-6 h-6 text-primary" />
+            </div>
+            <CardTitle className="text-xl">Admin Panel</CardTitle>
+            <CardDescription>Enter admin password to continue</CardDescription>
           </CardHeader>
-          <CardContent className="py-8 text-center">
-            <Button
-              onClick={login}
-              disabled={isLoggingIn}
-              className="gap-2"
-              data-ocid="admin.sign_in.primary_button"
-            >
-              {isLoggingIn ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> Signing in...
-                </>
-              ) : (
-                <>
-                  <LogIn className="w-4 h-4" /> Sign In with Internet Identity
-                </>
+          <CardContent className="space-y-4 pt-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="admin-password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="admin-password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setLoginError("");
+                  }}
+                  placeholder="Enter admin password"
+                  className="pr-10"
+                  data-ocid="admin.login.input"
+                  onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+              {loginError && (
+                <p
+                  className="text-sm text-destructive pt-1"
+                  data-ocid="admin.login.error_state"
+                >
+                  {loginError}
+                </p>
               )}
+            </div>
+            <Button
+              className="w-full"
+              onClick={handleLogin}
+              data-ocid="admin.login.submit_button"
+            >
+              Sign In
             </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (isAdmin === null) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2
-          className="w-8 h-8 animate-spin text-muted-foreground"
-          data-ocid="admin.loading_state"
-        />
-      </div>
-    );
-  }
-
-  if (isAdmin === false) {
-    return (
-      <div className="max-w-2xl mx-auto">
-        <Card>
-          <CardContent className="py-16 text-center">
-            <ShieldAlert className="w-12 h-12 text-destructive mx-auto mb-4" />
-            <h2 className="text-lg font-semibold mb-2">Access Denied</h2>
-            <p className="text-sm text-muted-foreground">
-              Your Internet Identity does not have admin privileges.
-            </p>
+            <div className="text-center">
+              <Link
+                to="/"
+                className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+                data-ocid="admin.login.link"
+              >
+                ← Back to App
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -954,10 +1088,23 @@ export default function AdminPage() {
     <div className="max-w-5xl mx-auto">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Admin Panel</CardTitle>
-          <CardDescription>
-            Manage restaurants, users, categories, and raw materials.
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-2xl">Admin Panel</CardTitle>
+              <CardDescription>
+                Manage restaurants, users, categories, and raw materials.
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSignOut}
+              className="gap-2"
+              data-ocid="admin.sign_out.button"
+            >
+              <LogOut className="w-4 h-4" /> Sign Out
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="restaurants" data-ocid="admin.tab">
@@ -977,6 +1124,9 @@ export default function AdminPage() {
               <TabsTrigger value="categories" data-ocid="admin.categories.tab">
                 Category Master
               </TabsTrigger>
+              <TabsTrigger value="settings" data-ocid="admin.settings.tab">
+                Settings
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="restaurants">
               <RestaurantMasterTab />
@@ -986,6 +1136,9 @@ export default function AdminPage() {
             </TabsContent>
             <TabsContent value="categories">
               <CategoryMasterTab />
+            </TabsContent>
+            <TabsContent value="settings">
+              <SettingsTab />
             </TabsContent>
           </Tabs>
         </CardContent>

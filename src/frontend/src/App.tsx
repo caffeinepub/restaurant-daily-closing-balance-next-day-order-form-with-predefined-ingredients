@@ -13,6 +13,7 @@ import AppLayout from "./components/AppLayout";
 import AdminPage from "./pages/AdminPage";
 import DailyEntryPage from "./pages/DailyEntryPage";
 import HistoryPage from "./pages/HistoryPage";
+import RaisedConcernPage from "./pages/RaisedConcernPage";
 import RecordDetailPage from "./pages/RecordDetailPage";
 import UserLoginPage from "./pages/UserLoginPage";
 import { initMasterData } from "./utils/masterData";
@@ -53,6 +54,12 @@ const recordDetailRoute = createRoute({
   component: RecordDetailPage,
 });
 
+const concernRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/history/$recordId/concern",
+  component: RaisedConcernPage,
+});
+
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
@@ -69,6 +76,7 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   historyRoute,
   recordDetailRoute,
+  concernRoute,
   loginRoute,
   adminRoute,
 ]);

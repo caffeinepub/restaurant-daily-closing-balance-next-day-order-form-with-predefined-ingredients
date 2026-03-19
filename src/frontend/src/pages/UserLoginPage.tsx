@@ -2,8 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useNavigate } from "@tanstack/react-router";
-import { Loader2, LogIn } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { Loader2, LogIn, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { useRestaurantSession } from "../hooks/useRestaurantSession";
 import { loginUser } from "../utils/masterData";
@@ -118,7 +118,18 @@ export default function UserLoginPage() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-muted-foreground mt-6">
+        {/* Admin access link */}
+        <div className="mt-4 text-center">
+          <Link
+            to="/admin"
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Admin Panel Login
+          </Link>
+        </div>
+
+        <p className="text-center text-xs text-muted-foreground mt-4">
           © {new Date().getFullYear()} Shri Hoshnagi Enterprises
         </p>
       </div>

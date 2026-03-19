@@ -25,3 +25,20 @@ export interface SavedDailyRecord {
   /** 1-based order number shown in the UI */
   orderNo: number;
 }
+
+export type ConcernStatus = "accepted" | "rejected" | "";
+
+export interface ConcernItemStatus {
+  itemName: string;
+  category: string;
+  orderQty: number;
+  status: ConcernStatus;
+}
+
+export interface ConcernRecord {
+  recordIndex: number;
+  restaurantName: string;
+  timestamp: number;
+  itemStatuses: ConcernItemStatus[];
+  confirmedAt: number;
+}

@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { useNavigate } from "@tanstack/react-router";
 import {
+  AlertTriangle,
   CalendarSearch,
   ChevronRight,
   Download,
@@ -65,6 +66,10 @@ function filterRecords(
   });
 }
 
+function isWithin24h(record: SavedDailyRecord): boolean {
+  return Date.now() - Number(record.timestamp) < 24 * 60 * 60 * 1000;
+}
+
 export default function HistoryPage() {
   const { session } = useRestaurantSession();
   const navigate = useNavigate();
@@ -91,6 +96,13 @@ export default function HistoryPage() {
   const handleViewRecord = (recordIndex: number) => {
     navigate({
       to: "/history/$recordId",
+      params: { recordId: String(recordIndex) },
+    });
+  };
+
+  const handleRaiseConcern = (recordIndex: number) => {
+    navigate({
+      to: "/history/$recordId/concern",
       params: { recordId: String(recordIndex) },
     });
   };
@@ -255,6 +267,9 @@ export default function HistoryPage() {
                         ...new Set(record.entries.map((e) => e.category)),
                       ];
                       const rowNum = idx + 1;
+                      const concernSaved = !!localStorage.getItem(
+                        `concern_${record.recordIndex}`,
+                      );
                       return (
                         <TableRow
                           key={record.recordIndex}
@@ -274,7 +289,22 @@ export default function HistoryPage() {
                             {record.entries.length !== 1 ? "s" : ""}
                           </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
+                            <div className="flex items-center justify-end gap-1 flex-wrap">
+                              {(isWithin24h(record) || concernSaved) && (
+                                <Button
+                                  size="sm"
+                                  className="gap-1 bg-red-600 hover:bg-red-700 text-white font-bold"
+                                  onClick={() =>
+                                    handleRaiseConcern(record.recordIndex)
+                                  }
+                                  data-ocid={`history.concern_button.${rowNum}`}
+                                >
+                                  <AlertTriangle className="w-3.5 h-3.5" />
+                                  {concernSaved
+                                    ? "View Concern"
+                                    : "Raised Concern"}
+                                </Button>
+                              )}
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button
@@ -332,6 +362,9 @@ export default function HistoryPage() {
                     ...new Set(record.entries.map((e) => e.category)),
                   ];
                   const cardNum = idx + 1;
+                  const concernSaved = !!localStorage.getItem(
+                    `concern_${record.recordIndex}`,
+                  );
                   return (
                     <Card
                       key={record.recordIndex}
@@ -352,53 +385,63 @@ export default function HistoryPage() {
                             </div>
                           </div>
                         </div>
+                        <div className="text-sm text-muted-foreground">
+                          {record.entries.length} ingredient
+                          {record.entries.length !== 1 ? "s" : ""}
+                        </div>
+                        {/* Raised Concern button — full width, red, prominent */}
+                        {(isWithin24h(record) || concernSaved) && (
+                          <Button
+                            className="w-full gap-2 bg-red-600 hover:bg-red-700 text-white font-bold"
+                            size="sm"
+                            onClick={() =>
+                              handleRaiseConcern(record.recordIndex)
+                            }
+                            data-ocid={`history.concern_button.${cardNum}`}
+                          >
+                            <AlertTriangle className="w-4 h-4" />
+                            {concernSaved ? "View Concern" : "Raised Concern"}
+                          </Button>
+                        )}
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm text-muted-foreground">
-                            {record.entries.length} ingredient
-                            {record.entries.length !== 1 ? "s" : ""}
-                          </span>
-                          <div className="flex gap-2">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="gap-1"
-                                  data-ocid={`history.export_button.${cardNum}`}
-                                >
-                                  <Download className="w-3.5 h-3.5" />
-                                  Export
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => handleCopyPlainText(record)}
-                                  data-ocid={`history.export_plaintext.${cardNum}`}
-                                >
-                                  <FileText className="w-4 h-4 mr-2" />
-                                  Plain Text (Copy)
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleExportCSV(record)}
-                                  data-ocid={`history.export_csv.${cardNum}`}
-                                >
-                                  <Download className="w-4 h-4 mr-2" />
-                                  CSV File (Excel/Sheets)
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                handleViewRecord(record.recordIndex)
-                              }
-                              data-ocid={`history.view_button.${cardNum}`}
-                            >
-                              View
-                              <ChevronRight className="w-4 h-4 ml-1" />
-                            </Button>
-                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1"
+                                data-ocid={`history.export_button.${cardNum}`}
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                                Export
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => handleCopyPlainText(record)}
+                                data-ocid={`history.export_plaintext.${cardNum}`}
+                              >
+                                <FileText className="w-4 h-4 mr-2" />
+                                Plain Text (Copy)
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleExportCSV(record)}
+                                data-ocid={`history.export_csv.${cardNum}`}
+                              >
+                                <Download className="w-4 h-4 mr-2" />
+                                CSV File (Excel/Sheets)
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewRecord(record.recordIndex)}
+                            data-ocid={`history.view_button.${cardNum}`}
+                          >
+                            View
+                            <ChevronRight className="w-4 h-4 ml-1" />
+                          </Button>
                         </div>
                       </div>
                     </Card>

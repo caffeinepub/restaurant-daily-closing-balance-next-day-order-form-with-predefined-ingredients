@@ -7,6 +7,8 @@ const RESTAURANTS_KEY = "hoshnagi_restaurants";
 const USERS_KEY = "hoshnagi_users";
 const CATEGORIES_KEY = "hoshnagi_categories";
 const RAW_MATERIALS_KEY = "hoshnagi_raw_materials";
+const ADMIN_PASSWORD_KEY = "hoshnagi_admin_password";
+const DEFAULT_ADMIN_PASSWORD = "admin1234";
 
 export interface Restaurant {
   id: string;
@@ -31,6 +33,10 @@ export interface RawMaterial {
 }
 
 export function initMasterData() {
+  if (!localStorage.getItem(ADMIN_PASSWORD_KEY)) {
+    localStorage.setItem(ADMIN_PASSWORD_KEY, DEFAULT_ADMIN_PASSWORD);
+  }
+
   if (!localStorage.getItem(RESTAURANTS_KEY)) {
     const defaultRestaurants: Restaurant[] = [
       { id: "1", name: "Andaaz" },
@@ -67,6 +73,19 @@ export function initMasterData() {
     }));
     localStorage.setItem(RAW_MATERIALS_KEY, JSON.stringify(mats));
   }
+}
+
+// --- Admin Password ---
+export function getAdminPassword(): string {
+  return localStorage.getItem(ADMIN_PASSWORD_KEY) || DEFAULT_ADMIN_PASSWORD;
+}
+
+export function setAdminPassword(newPassword: string): void {
+  localStorage.setItem(ADMIN_PASSWORD_KEY, newPassword);
+}
+
+export function verifyAdminPassword(password: string): boolean {
+  return password === getAdminPassword();
 }
 
 // --- Restaurants ---

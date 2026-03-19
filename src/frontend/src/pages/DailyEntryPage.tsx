@@ -443,6 +443,49 @@ export default function DailyEntryPage() {
                 Step 2: Search &amp; Add
               </CardTitle>
 
+              {/* Search with results ABOVE — placed first so it appears above Balance/Order */}
+              <div className="relative mb-3">
+                {showDropdown && filteredIngredients.length > 0 && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 bg-gray-950 border border-gray-800 rounded-lg shadow-xl z-50 max-h-56 overflow-y-auto">
+                    {filteredIngredients.map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        className="w-full text-left px-4 py-2.5 text-white font-bold text-sm hover:bg-gray-800 transition-colors"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          handleSelectIngredient(m.name);
+                        }}
+                      >
+                        {m.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <Input
+                  ref={searchInputRef}
+                  value={searchText}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onFocus={() => searchText.length > 0 && setShowDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+                  placeholder="Type to search ingredient..."
+                  data-ocid="entry.search.input"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (
+                        filteredIngredients.length > 0 &&
+                        !selectedIngredient
+                      ) {
+                        handleSelectIngredient(filteredIngredients[0].name);
+                      } else {
+                        balanceInputRef.current?.focus();
+                      }
+                    }
+                  }}
+                />
+              </div>
+
               {/* Fixed Balance/Order inputs */}
               <div className="flex gap-3 mb-3">
                 <div className="flex-1">
@@ -485,49 +528,6 @@ export default function DailyEntryPage() {
                     }}
                   />
                 </div>
-              </div>
-
-              {/* Search with results ABOVE */}
-              <div className="relative">
-                {showDropdown && filteredIngredients.length > 0 && (
-                  <div className="absolute bottom-full left-0 right-0 mb-1 bg-gray-950 border border-gray-800 rounded-lg shadow-xl z-50 max-h-56 overflow-y-auto">
-                    {filteredIngredients.map((m) => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        className="w-full text-left px-4 py-2.5 text-white font-bold text-sm hover:bg-gray-800 transition-colors"
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          handleSelectIngredient(m.name);
-                        }}
-                      >
-                        {m.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <Input
-                  ref={searchInputRef}
-                  value={searchText}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  onFocus={() => searchText.length > 0 && setShowDropdown(true)}
-                  onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-                  placeholder="Type to search ingredient..."
-                  data-ocid="entry.search.input"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      if (
-                        filteredIngredients.length > 0 &&
-                        !selectedIngredient
-                      ) {
-                        handleSelectIngredient(filteredIngredients[0].name);
-                      } else {
-                        balanceInputRef.current?.focus();
-                      }
-                    }
-                  }}
-                />
               </div>
 
               {/* Add Item Button */}
