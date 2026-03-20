@@ -90,6 +90,9 @@ export default function DailyEntryPage() {
 
   // Duplicate alert
   const [showDuplicateAlert, setShowDuplicateAlert] = useState(false);
+  const [ingredientOptions, setIngredientOptions] = useState<
+    { id: string; name: string; category: string }[]
+  >([]);
   const [pendingDuplicate, setPendingDuplicate] = useState<{
     existingIndex: number;
     newItem: CartItem;
@@ -109,18 +112,28 @@ export default function DailyEntryPage() {
 
   // Load categories from masterData
   useEffect(() => {
-    const cats = getMasterCategories().map((c) => c.name);
-    setCategories(cats);
+    getMasterCategories().then((cats) =>
+      setCategories(cats.map((c) => c.name)),
+    );
   }, []);
+
+  // Load ingredient options when selectedCategory changes
+  useEffect(() => {
+    if (selectedCategory) {
+      getRawMaterialsByCategory(selectedCategory).then(setIngredientOptions);
+    } else {
+      setIngredientOptions([]);
+    }
+  }, [selectedCategory]);
 
   if (!session) return null;
 
   const restaurantName = session.restaurantName;
 
-  // Filtered ingredient suggestions from masterData
+  // Filtered ingredient suggestions from loaded options
   const filteredIngredients =
     selectedCategory && searchText.length > 0
-      ? getRawMaterialsByCategory(selectedCategory).filter((m) =>
+      ? ingredientOptions.filter((m) =>
           m.name.toLowerCase().includes(searchText.toLowerCase()),
         )
       : [];

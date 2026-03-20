@@ -1,14 +1,4 @@
-import {
-  CATEGORIES,
-  PREDEFINED_INGREDIENTS,
-} from "../data/predefinedIngredients";
-
-const RESTAURANTS_KEY = "hoshnagi_restaurants";
-const USERS_KEY = "hoshnagi_users";
-const CATEGORIES_KEY = "hoshnagi_categories";
-const RAW_MATERIALS_KEY = "hoshnagi_raw_materials";
-const ADMIN_PASSWORD_KEY = "hoshnagi_admin_password";
-const DEFAULT_ADMIN_PASSWORD = "admin1234";
+import { getAnonActor, getFreshActor, resetActorCache } from "./backendClient";
 
 export interface Restaurant {
   id: string;
@@ -32,195 +22,166 @@ export interface RawMaterial {
   category: string;
 }
 
-export function initMasterData() {
-  if (!localStorage.getItem(ADMIN_PASSWORD_KEY)) {
-    localStorage.setItem(ADMIN_PASSWORD_KEY, DEFAULT_ADMIN_PASSWORD);
-  }
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-  if (!localStorage.getItem(RESTAURANTS_KEY)) {
-    const defaultRestaurants: Restaurant[] = [
-      { id: "1", name: "Andaaz" },
-      { id: "2", name: "Kai wok Express" },
-    ];
-    localStorage.setItem(RESTAURANTS_KEY, JSON.stringify(defaultRestaurants));
-  }
-
-  if (!localStorage.getItem(USERS_KEY)) {
-    const defaultUsers: RestaurantUser[] = [
-      { username: "andaaz", password: "andaaz123", restaurantName: "Andaaz" },
-      {
-        username: "kaiwok",
-        password: "kaiwok123",
-        restaurantName: "Kai wok Express",
-      },
-    ];
-    localStorage.setItem(USERS_KEY, JSON.stringify(defaultUsers));
-  }
-
-  if (!localStorage.getItem(CATEGORIES_KEY)) {
-    const cats: MasterCategory[] = CATEGORIES.map((name, i) => ({
-      id: String(i + 1),
-      name,
-    }));
-    localStorage.setItem(CATEGORIES_KEY, JSON.stringify(cats));
-  }
-
-  if (!localStorage.getItem(RAW_MATERIALS_KEY)) {
-    const mats: RawMaterial[] = PREDEFINED_INGREDIENTS.map((ing, i) => ({
-      id: String(i + 1),
-      name: ing.name,
-      category: ing.category,
-    }));
-    localStorage.setItem(RAW_MATERIALS_KEY, JSON.stringify(mats));
+// --- Init ---
+export async function initMasterData(): Promise<void> {
+  try {
+    const actor = await getAnonActor();
+    await actor.seedDefaultData();
+  } catch {
+    // silent — app still works, login will retry independently
+    resetActorCache();
   }
 }
 
 // --- Admin Password ---
-export function getAdminPassword(): string {
-  return localStorage.getItem(ADMIN_PASSWORD_KEY) || DEFAULT_ADMIN_PASSWORD;
+export async function setAdminPassword(newPassword: string): Promise<void> {
+  const actor = await getAnonActor();
+  await actor.setAdminPassword(newPassword);
 }
 
-export function setAdminPassword(newPassword: string): void {
-  localStorage.setItem(ADMIN_PASSWORD_KEY, newPassword);
-}
-
-export function verifyAdminPassword(password: string): boolean {
-  return password === getAdminPassword();
+export async function verifyAdminPassword(password: string): Promise<boolean> {
+  const actor = await getAnonActor();
+  return actor.verifyAdminPassword(password);
 }
 
 // --- Restaurants ---
-export function getRestaurants(): Restaurant[] {
-  try {
-    return JSON.parse(localStorage.getItem(RESTAURANTS_KEY) || "[]");
-  } catch {
-    return [];
-  }
+export async function getRestaurants(): Promise<Restaurant[]> {
+  const actor = await getAnonActor();
+  return actor.getRestaurants();
 }
 
-export function addRestaurant(name: string): void {
-  const list = getRestaurants();
-  const id = String(Date.now());
-  list.push({ id, name });
-  localStorage.setItem(RESTAURANTS_KEY, JSON.stringify(list));
+export async function addRestaurant(name: string): Promise<void> {
+  const actor = await getAnonActor();
+  await actor.addRestaurant(name);
 }
 
-export function updateRestaurant(id: string, name: string): void {
-  const list = getRestaurants().map((r) => (r.id === id ? { ...r, name } : r));
-  localStorage.setItem(RESTAURANTS_KEY, JSON.stringify(list));
+export async function updateRestaurant(
+  id: string,
+  name: string,
+): Promise<void> {
+  const actor = await getAnonActor();
+  await actor.updateRestaurant(id, name);
 }
 
-export function deleteRestaurant(id: string): void {
-  const list = getRestaurants().filter((r) => r.id !== id);
-  localStorage.setItem(RESTAURANTS_KEY, JSON.stringify(list));
+export async function deleteRestaurant(id: string): Promise<void> {
+  const actor = await getAnonActor();
+  await actor.deleteRestaurant(id);
 }
 
 // --- Users ---
-export function getUsers(): RestaurantUser[] {
-  try {
-    return JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
-  } catch {
-    return [];
-  }
+export async function getUsers(): Promise<RestaurantUser[]> {
+  const actor = await getAnonActor();
+  return actor.getUsers();
 }
 
-export function addUser(
+export async function addUser(
   username: string,
   password: string,
   restaurantName: string,
-): void {
-  const list = getUsers();
-  list.push({ username, password, restaurantName });
-  localStorage.setItem(USERS_KEY, JSON.stringify(list));
+): Promise<void> {
+  const actor = await getAnonActor();
+  await actor.addUser(username, password, restaurantName);
 }
 
-export function updateUser(
+export async function updateUser(
   username: string,
   newPassword: string,
   restaurantName: string,
-): void {
-  const list = getUsers().map((u) =>
-    u.username === username
-      ? { ...u, password: newPassword, restaurantName }
-      : u,
-  );
-  localStorage.setItem(USERS_KEY, JSON.stringify(list));
+): Promise<void> {
+  const actor = await getAnonActor();
+  await actor.updateUser(username, newPassword, restaurantName);
 }
 
-export function deleteUser(username: string): void {
-  const list = getUsers().filter((u) => u.username !== username);
-  localStorage.setItem(USERS_KEY, JSON.stringify(list));
+export async function deleteUser(username: string): Promise<void> {
+  const actor = await getAnonActor();
+  await actor.deleteUser(username);
 }
 
-export function loginUser(
+/**
+ * Login with automatic retry — tries up to 3 times with a fresh actor
+ * each attempt so a single network blip doesn't block the user.
+ */
+export async function loginUser(
   username: string,
   password: string,
-): RestaurantUser | null {
-  const list = getUsers();
-  return (
-    list.find((u) => u.username === username && u.password === password) ?? null
-  );
+): Promise<RestaurantUser | null> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      // Always get a fresh actor for login to avoid stale cached connections
+      const actor = await getFreshActor();
+      // Ensure default users exist (non-blocking, best effort)
+      actor.seedDefaultData().catch(() => {});
+      const result = await actor.verifyUserLogin(username, password);
+      if (result.length > 0) {
+        return { username, password: "", restaurantName: result[0] as string };
+      }
+      return null;
+    } catch (err) {
+      lastErr = err;
+      resetActorCache();
+      if (attempt < 2) {
+        await sleep(1500 * (attempt + 1));
+      }
+    }
+  }
+  throw lastErr;
 }
 
 // --- Categories ---
-export function getMasterCategories(): MasterCategory[] {
-  try {
-    return JSON.parse(localStorage.getItem(CATEGORIES_KEY) || "[]");
-  } catch {
-    return [];
-  }
+export async function getMasterCategories(): Promise<MasterCategory[]> {
+  const actor = await getAnonActor();
+  return actor.getCategories();
 }
 
-export function addCategory(name: string): void {
-  const list = getMasterCategories();
-  const id = String(Date.now());
-  list.push({ id, name });
-  localStorage.setItem(CATEGORIES_KEY, JSON.stringify(list));
+export async function addCategory(name: string): Promise<void> {
+  const actor = await getAnonActor();
+  await actor.addCategory(name);
 }
 
-export function updateCategory(id: string, name: string): void {
-  const list = getMasterCategories().map((c) =>
-    c.id === id ? { ...c, name } : c,
-  );
-  localStorage.setItem(CATEGORIES_KEY, JSON.stringify(list));
+export async function updateCategory(id: string, name: string): Promise<void> {
+  const actor = await getAnonActor();
+  await actor.updateCategory(id, name);
 }
 
-export function deleteCategory(id: string): void {
-  const list = getMasterCategories().filter((c) => c.id !== id);
-  localStorage.setItem(CATEGORIES_KEY, JSON.stringify(list));
+export async function deleteCategory(id: string): Promise<void> {
+  const actor = await getAnonActor();
+  await actor.deleteCategory(id);
 }
 
 // --- Raw Materials ---
-export function getRawMaterials(): RawMaterial[] {
-  try {
-    return JSON.parse(localStorage.getItem(RAW_MATERIALS_KEY) || "[]");
-  } catch {
-    return [];
-  }
+export async function getRawMaterials(): Promise<RawMaterial[]> {
+  const actor = await getAnonActor();
+  return actor.getRawMaterials();
 }
 
-export function getRawMaterialsByCategory(category: string): RawMaterial[] {
-  return getRawMaterials().filter((m) => m.category === category);
+export async function getRawMaterialsByCategory(
+  category: string,
+): Promise<RawMaterial[]> {
+  const actor = await getAnonActor();
+  return actor.getRawMaterialsByCategory(category);
 }
 
-export function addRawMaterial(name: string, category: string): void {
-  const list = getRawMaterials();
-  const id = String(Date.now());
-  list.push({ id, name, category });
-  localStorage.setItem(RAW_MATERIALS_KEY, JSON.stringify(list));
+export async function addRawMaterial(
+  name: string,
+  category: string,
+): Promise<void> {
+  const actor = await getAnonActor();
+  await actor.addRawMaterial(name, category);
 }
 
-export function updateRawMaterial(
+export async function updateRawMaterial(
   id: string,
   name: string,
   category: string,
-): void {
-  const list = getRawMaterials().map((m) =>
-    m.id === id ? { ...m, name, category } : m,
-  );
-  localStorage.setItem(RAW_MATERIALS_KEY, JSON.stringify(list));
+): Promise<void> {
+  const actor = await getAnonActor();
+  await actor.updateRawMaterial(id, name, category);
 }
 
-export function deleteRawMaterial(id: string): void {
-  const list = getRawMaterials().filter((m) => m.id !== id);
-  localStorage.setItem(RAW_MATERIALS_KEY, JSON.stringify(list));
+export async function deleteRawMaterial(id: string): Promise<void> {
+  const actor = await getAnonActor();
+  await actor.deleteRawMaterial(id);
 }

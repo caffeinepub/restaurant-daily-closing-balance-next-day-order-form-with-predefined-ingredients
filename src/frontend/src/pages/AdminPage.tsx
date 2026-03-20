@@ -102,13 +102,17 @@ function RestaurantMasterTab() {
   const [deleteUsername, setDeleteUsername] = useState<string | null>(null);
 
   const reload = () => {
-    setRestaurants(getRestaurants());
-    setUsers(getUsers());
+    Promise.all([getRestaurants(), getUsers()]).then(([rests, usrs]) => {
+      setRestaurants(rests);
+      setUsers(usrs);
+    });
   };
 
   useEffect(() => {
-    setRestaurants(getRestaurants());
-    setUsers(getUsers());
+    Promise.all([getRestaurants(), getUsers()]).then(([rests, usrs]) => {
+      setRestaurants(rests);
+      setUsers(usrs);
+    });
   }, []);
 
   const openAddRest = () => {
@@ -121,24 +125,32 @@ function RestaurantMasterTab() {
     setRestName(r.name);
     setShowRestDialog(true);
   };
-  const saveRest = () => {
+  const saveRest = async () => {
     if (!restName.trim()) return;
-    if (editingRest) {
-      updateRestaurant(editingRest.id, restName.trim());
-      toast.success("Restaurant updated.");
-    } else {
-      addRestaurant(restName.trim());
-      toast.success("Restaurant added.");
+    try {
+      if (editingRest) {
+        await updateRestaurant(editingRest.id, restName.trim());
+        toast.success("Restaurant updated.");
+      } else {
+        await addRestaurant(restName.trim());
+        toast.success("Restaurant added.");
+      }
+      setShowRestDialog(false);
+      reload();
+    } catch {
+      toast.error("Failed to save restaurant.");
     }
-    setShowRestDialog(false);
-    reload();
   };
-  const confirmDeleteRest = () => {
+  const confirmDeleteRest = async () => {
     if (!deleteRestId) return;
-    deleteRestaurant(deleteRestId);
-    setDeleteRestId(null);
-    toast.success("Restaurant deleted.");
-    reload();
+    try {
+      await deleteRestaurant(deleteRestId);
+      setDeleteRestId(null);
+      toast.success("Restaurant deleted.");
+      reload();
+    } catch {
+      toast.error("Failed to delete restaurant.");
+    }
   };
 
   const openAddUser = () => {
@@ -155,24 +167,32 @@ function RestaurantMasterTab() {
     setURestaurant(u.restaurantName);
     setShowUserDialog(true);
   };
-  const saveUser = () => {
+  const saveUser = async () => {
     if (!uUsername.trim() || !uPassword.trim() || !uRestaurant) return;
-    if (editingUser) {
-      updateUser(uUsername.trim(), uPassword.trim(), uRestaurant);
-      toast.success("User updated.");
-    } else {
-      addUser(uUsername.trim(), uPassword.trim(), uRestaurant);
-      toast.success("User added.");
+    try {
+      if (editingUser) {
+        await updateUser(uUsername.trim(), uPassword.trim(), uRestaurant);
+        toast.success("User updated.");
+      } else {
+        await addUser(uUsername.trim(), uPassword.trim(), uRestaurant);
+        toast.success("User added.");
+      }
+      setShowUserDialog(false);
+      reload();
+    } catch {
+      toast.error("Failed to save user.");
     }
-    setShowUserDialog(false);
-    reload();
   };
-  const confirmDeleteUser = () => {
+  const confirmDeleteUser = async () => {
     if (!deleteUsername) return;
-    deleteUser(deleteUsername);
-    setDeleteUsername(null);
-    toast.success("User deleted.");
-    reload();
+    try {
+      await deleteUser(deleteUsername);
+      setDeleteUsername(null);
+      toast.success("User deleted.");
+      reload();
+    } catch {
+      toast.error("Failed to delete user.");
+    }
   };
 
   return (
@@ -460,12 +480,20 @@ function RawMaterialMasterTab() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const reload = () => {
-    setMaterials(getRawMaterials());
-    setCategories(getMasterCategories());
+    Promise.all([getRawMaterials(), getMasterCategories()]).then(
+      ([mats, cats]) => {
+        setMaterials(mats);
+        setCategories(cats);
+      },
+    );
   };
   useEffect(() => {
-    setMaterials(getRawMaterials());
-    setCategories(getMasterCategories());
+    Promise.all([getRawMaterials(), getMasterCategories()]).then(
+      ([mats, cats]) => {
+        setMaterials(mats);
+        setCategories(cats);
+      },
+    );
   }, []);
 
   const openAdd = () => {
@@ -480,24 +508,32 @@ function RawMaterialMasterTab() {
     setMatCategory(m.category);
     setShowDialog(true);
   };
-  const save = () => {
+  const save = async () => {
     if (!matName.trim() || !matCategory) return;
-    if (editingMat) {
-      updateRawMaterial(editingMat.id, matName.trim(), matCategory);
-      toast.success("Raw material updated.");
-    } else {
-      addRawMaterial(matName.trim(), matCategory);
-      toast.success("Raw material added.");
+    try {
+      if (editingMat) {
+        await updateRawMaterial(editingMat.id, matName.trim(), matCategory);
+        toast.success("Raw material updated.");
+      } else {
+        await addRawMaterial(matName.trim(), matCategory);
+        toast.success("Raw material added.");
+      }
+      setShowDialog(false);
+      reload();
+    } catch {
+      toast.error("Failed to save raw material.");
     }
-    setShowDialog(false);
-    reload();
   };
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteId) return;
-    deleteRawMaterial(deleteId);
-    setDeleteId(null);
-    toast.success("Raw material deleted.");
-    reload();
+    try {
+      await deleteRawMaterial(deleteId);
+      setDeleteId(null);
+      toast.success("Raw material deleted.");
+      reload();
+    } catch {
+      toast.error("Failed to delete raw material.");
+    }
   };
 
   const displayed =
@@ -662,9 +698,9 @@ function CategoryMasterTab() {
   const [catName, setCatName] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const reload = () => setCategories(getMasterCategories());
+  const reload = () => getMasterCategories().then(setCategories);
   useEffect(() => {
-    setCategories(getMasterCategories());
+    getMasterCategories().then(setCategories);
   }, []);
 
   const openAdd = () => {
@@ -677,24 +713,32 @@ function CategoryMasterTab() {
     setCatName(c.name);
     setShowDialog(true);
   };
-  const save = () => {
+  const save = async () => {
     if (!catName.trim()) return;
-    if (editingCat) {
-      updateCategory(editingCat.id, catName.trim());
-      toast.success("Category updated.");
-    } else {
-      addCategory(catName.trim());
-      toast.success("Category added.");
+    try {
+      if (editingCat) {
+        await updateCategory(editingCat.id, catName.trim());
+        toast.success("Category updated.");
+      } else {
+        await addCategory(catName.trim());
+        toast.success("Category added.");
+      }
+      setShowDialog(false);
+      reload();
+    } catch {
+      toast.error("Failed to save category.");
     }
-    setShowDialog(false);
-    reload();
   };
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteId) return;
-    deleteCategory(deleteId);
-    setDeleteId(null);
-    toast.success("Category deleted.");
-    reload();
+    try {
+      await deleteCategory(deleteId);
+      setDeleteId(null);
+      toast.success("Category deleted.");
+      reload();
+    } catch {
+      toast.error("Failed to delete category.");
+    }
   };
 
   return (
@@ -825,25 +869,30 @@ function SettingsTab() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError("");
-    if (!verifyAdminPassword(currentPwd)) {
-      setError("Current password is incorrect.");
-      return;
+    try {
+      const valid = await verifyAdminPassword(currentPwd);
+      if (!valid) {
+        setError("Current password is incorrect.");
+        return;
+      }
+      if (newPwd.length < 6) {
+        setError("New password must be at least 6 characters.");
+        return;
+      }
+      if (newPwd !== confirmPwd) {
+        setError("New password and confirmation do not match.");
+        return;
+      }
+      await setAdminPassword(newPwd);
+      toast.success("Password updated successfully");
+      setCurrentPwd("");
+      setNewPwd("");
+      setConfirmPwd("");
+    } catch {
+      setError("Failed to update password. Please try again.");
     }
-    if (newPwd.length < 6) {
-      setError("New password must be at least 6 characters.");
-      return;
-    }
-    if (newPwd !== confirmPwd) {
-      setError("New password and confirmation do not match.");
-      return;
-    }
-    setAdminPassword(newPwd);
-    toast.success("Password updated successfully");
-    setCurrentPwd("");
-    setNewPwd("");
-    setConfirmPwd("");
   };
 
   return (
@@ -975,18 +1024,23 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      initMasterData();
+      initMasterData().catch(console.error);
     }
   }, [isAuthenticated]);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setLoginError("");
-    if (verifyAdminPassword(password)) {
-      sessionStorage.setItem(ADMIN_SESSION_KEY, "true");
-      setIsAuthenticated(true);
-      setPassword("");
-    } else {
-      setLoginError("Incorrect password. Please try again.");
+    try {
+      const valid = await verifyAdminPassword(password);
+      if (valid) {
+        sessionStorage.setItem(ADMIN_SESSION_KEY, "true");
+        setIsAuthenticated(true);
+        setPassword("");
+      } else {
+        setLoginError("Incorrect password. Please try again.");
+      }
+    } catch {
+      setLoginError("Connection error. Please try again.");
     }
   };
 

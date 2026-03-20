@@ -6,6 +6,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { Loader2, LogIn, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { useRestaurantSession } from "../hooks/useRestaurantSession";
+import { resetActorCache } from "../utils/backendClient";
 import { loginUser } from "../utils/masterData";
 
 export default function UserLoginPage() {
@@ -15,21 +16,60 @@ export default function UserLoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [failCount, setFailCount] = useState(0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
+    setRetrying(false);
+    resetActorCache();
+
+    // Show "Retrying..." after a short delay to let user know retries are happening
+    const retryTimer = setTimeout(() => setRetrying(true), 2000);
+
     try {
-      const user = loginUser(username.trim(), password);
+      const user = await loginUser(username.trim(), password);
+      clearTimeout(retryTimer);
       if (!user) {
-        setError("Invalid username or password");
+        setFailCount((c) => c + 1);
+        setError(
+          "Invalid username or password. Please check your credentials.",
+        );
         return;
       }
       login(user.username, user.password, user.restaurantName);
       navigate({ to: "/" });
+    } catch (err) {
+      clearTimeout(retryTimer);
+      resetActorCache();
+      setFailCount((c) => c + 1);
+      const msg = err instanceof Error ? err.message : String(err);
+      const lower = msg.toLowerCase();
+      if (
+        lower.includes("stopped") ||
+        lower.includes("canister") ||
+        lower.includes("ic0508") ||
+        lower.includes("rejected")
+      ) {
+        setError(
+          "Backend service is temporarily unavailable. Please wait a moment and try again.",
+        );
+      } else if (
+        lower.includes("network") ||
+        lower.includes("fetch") ||
+        lower.includes("timeout")
+      ) {
+        setError(
+          "Network error — check your internet connection and try again.",
+        );
+      } else {
+        setError("Connection error. Please wait a few seconds and try again.");
+      }
     } finally {
       setLoading(false);
+      setRetrying(false);
     }
   };
 
@@ -90,12 +130,30 @@ export default function UserLoginPage() {
               </div>
 
               {error && (
-                <p
-                  className="text-sm text-destructive font-medium border border-destructive rounded px-3 py-2"
-                  data-ocid="login.error_state"
-                >
-                  {error}
-                </p>
+                <div className="space-y-2">
+                  <p
+                    className="text-sm text-destructive font-medium border border-destructive rounded px-3 py-2"
+                    data-ocid="login.error_state"
+                  >
+                    {error}
+                  </p>
+                  {failCount >= 2 && (
+                    <div className="text-xs text-muted-foreground bg-muted rounded px-3 py-2 space-y-1">
+                      <p className="font-medium">
+                        Default credentials (if not changed):
+                      </p>
+                      <p>
+                        Andaaz: <span className="font-mono">andaaz</span> /{" "}
+                        <span className="font-mono">andaaz123</span>
+                      </p>
+                      <p>
+                        Kai wok: <span className="font-mono">kaiwok</span> /{" "}
+                        <span className="font-mono">kaiwok123</span>
+                      </p>
+                      <p>Admin: use Admin Panel Login below</p>
+                    </div>
+                  )}
+                </div>
               )}
 
               <Button
@@ -106,7 +164,8 @@ export default function UserLoginPage() {
               >
                 {loading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" /> Signing in...
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {retrying ? "Retrying..." : "Signing in..."}
                   </>
                 ) : (
                   <>
@@ -130,7 +189,7 @@ export default function UserLoginPage() {
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-4">
-          © {new Date().getFullYear()} Shri Hoshnagi F&amp;B
+          &copy; {new Date().getFullYear()} Shri Hoshnagi F&amp;B
         </p>
       </div>
     </div>

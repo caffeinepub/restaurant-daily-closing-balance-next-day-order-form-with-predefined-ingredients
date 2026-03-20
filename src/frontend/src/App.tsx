@@ -91,7 +91,7 @@ declare module "@tanstack/react-router" {
 
 function AppInit() {
   useEffect(() => {
-    initMasterData();
+    initMasterData().catch(console.error);
   }, []);
   return null;
 }
