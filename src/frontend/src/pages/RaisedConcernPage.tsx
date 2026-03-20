@@ -254,8 +254,10 @@ export default function RaisedConcernPage() {
           <Table data-ocid="concern.table">
             <TableHeader>
               <TableRow>
-                <TableHead className="pl-2 py-2 text-xs">Item Name</TableHead>
-                <TableHead className="w-12 text-center py-2 text-xs">
+                <TableHead className="pl-1 pr-0 py-2 text-xs">
+                  Item Name
+                </TableHead>
+                <TableHead className="w-10 text-center py-2 text-xs pl-0">
                   Qty
                 </TableHead>
                 <TableHead className="w-28 text-center py-2 text-xs">
@@ -274,20 +276,20 @@ export default function RaisedConcernPage() {
                     data-ocid={`concern.item.${rowNum}`}
                   >
                     <TableCell
-                      className={`pl-2 py-1.5 text-sm font-semibold ${
+                      className={`pl-1 pr-0 py-1.5 text-xs font-semibold ${
                         isRejected ? "line-through text-red-500" : ""
                       }`}
                     >
                       {item.name}
                     </TableCell>
                     <TableCell
-                      className={`text-center py-1.5 text-sm ${
+                      className={`text-center py-1.5 text-xs pl-0 w-10 ${
                         isRejected ? "line-through text-red-500" : ""
                       }`}
                     >
                       {item.nextDayOrder}
                     </TableCell>
-                    <TableCell className="text-center py-1.5 pr-2">
+                    <TableCell className="text-center py-1.5 pr-1">
                       {isWithin24h ? (
                         <Select
                           value={status}
@@ -296,7 +298,7 @@ export default function RaisedConcernPage() {
                           }
                         >
                           <SelectTrigger
-                            className="w-24 mx-auto h-7 text-xs px-1"
+                            className="w-[88px] mx-auto h-7 text-xs px-1"
                             data-ocid={`concern.select.${rowNum}`}
                           >
                             <SelectValue placeholder="Select" />

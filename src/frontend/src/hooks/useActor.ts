@@ -11,22 +11,14 @@ export function useActor() {
   const actorQuery = useQuery<backendInterface>({
     queryKey: [ACTOR_QUERY_KEY, identity?.getPrincipal().toString()],
     queryFn: async () => {
-      const isAuthenticated = !!identity;
-
-      if (!isAuthenticated) {
-        // Return anonymous actor if not authenticated
-        return await createActorWithConfig();
+      if (identity) {
+        return await createActorWithConfig({
+          agentOptions: { identity },
+        });
       }
-
-      const actorOptions = {
-        agentOptions: {
-          identity,
-        },
-      };
-
-      return await createActorWithConfig(actorOptions);
+      // Anonymous actor for username/password users
+      return await createActorWithConfig();
     },
-    // Only refetch when identity changes
     staleTime: Number.POSITIVE_INFINITY,
     enabled: true,
   });

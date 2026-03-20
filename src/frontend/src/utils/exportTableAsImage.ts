@@ -23,7 +23,7 @@ export function exportConcernTableAsImage(params: {
   } = params;
 
   const dpr = window.devicePixelRatio || 1;
-  const colWidths = [260, 80, 140];
+  const colWidths = [175, 55, 110];
   const tableWidth = colWidths.reduce((a, b) => a + b, 0);
   const padding = 16;
   const canvasWidth = tableWidth + padding * 2;
