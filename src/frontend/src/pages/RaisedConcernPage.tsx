@@ -104,7 +104,9 @@ export default function RaisedConcernPage() {
     exportConcernTableAsImage({
       orderNo: record.orderNo,
       restaurantName: record.restaurantName,
-      balanceDate: formatDateDDMMYYYY(record.timestamp),
+      orderDate: formatDateDDMMYYYY(
+        BigInt(Number(record.timestamp) + 86400000),
+      ),
       categories: cats,
       totalIngredients: orderItems.length,
       items: orderItems.map((item, idx) => ({
@@ -226,9 +228,11 @@ export default function RaisedConcernPage() {
               <span className="font-semibold">{record.restaurantName}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Date: </span>
+              <span className="text-muted-foreground">Order Date: </span>
               <span className="font-semibold">
-                {formatDateDDMMYYYY(record.timestamp)}
+                {formatDateDDMMYYYY(
+                  BigInt(Number(record.timestamp) + 86400000),
+                )}
               </span>
             </div>
             <div>

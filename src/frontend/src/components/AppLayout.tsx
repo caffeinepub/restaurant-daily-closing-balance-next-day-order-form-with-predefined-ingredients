@@ -34,7 +34,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
                 <img
                   src="/assets/uploads/logo-app-draft-2.jpg"
-                  alt="Shri Hoshnagi F&B"
+                  alt="Shri Hoshnagi F&B Opp."
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     const el = e.target as HTMLImageElement;
@@ -47,7 +47,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-foreground">
-                  Shri Hoshnagi F&amp;B
+                  Shri Hoshnagi F&amp;B Opp.
                 </h1>
                 {session ? (
                   <p className="text-sm text-muted-foreground">
@@ -112,7 +112,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <footer className="border-t border-border bg-card mt-auto">
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-            <p>© {new Date().getFullYear()} Shri Hoshnagi F&amp;B</p>
+            <p>&copy; {new Date().getFullYear()} Shri Hoshnagi F&amp;B Opp.</p>
             <p className="flex items-center gap-1">
               Built with <SiCoffeescript className="w-4 h-4 text-chart-1" />{" "}
               using{" "}

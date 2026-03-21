@@ -290,21 +290,23 @@ export default function HistoryPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1 flex-wrap">
-                              {(isWithin24h(record) || concernSaved) && (
-                                <Button
-                                  size="sm"
-                                  className="gap-1 bg-red-600 hover:bg-red-700 text-white font-bold"
-                                  onClick={() =>
-                                    handleRaiseConcern(record.recordIndex)
-                                  }
-                                  data-ocid={`history.concern_button.${rowNum}`}
-                                >
-                                  <AlertTriangle className="w-3.5 h-3.5" />
-                                  {concernSaved
-                                    ? "View Concern"
-                                    : "Raised Concern"}
-                                </Button>
-                              )}
+                              <Button
+                                size="sm"
+                                className={
+                                  isWithin24h(record)
+                                    ? "gap-1 bg-red-600 hover:bg-red-700 text-white font-bold"
+                                    : "gap-1 bg-gray-500 hover:bg-gray-600 text-white font-bold"
+                                }
+                                onClick={() =>
+                                  handleRaiseConcern(record.recordIndex)
+                                }
+                                data-ocid={`history.concern_button.${rowNum}`}
+                              >
+                                <AlertTriangle className="w-3.5 h-3.5" />
+                                {concernSaved
+                                  ? "View Concern"
+                                  : "Raised Concern"}
+                              </Button>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button
@@ -389,20 +391,20 @@ export default function HistoryPage() {
                           {record.entries.length} ingredient
                           {record.entries.length !== 1 ? "s" : ""}
                         </div>
-                        {/* Raised Concern button — full width, red, prominent */}
-                        {(isWithin24h(record) || concernSaved) && (
-                          <Button
-                            className="w-full gap-2 bg-red-600 hover:bg-red-700 text-white font-bold"
-                            size="sm"
-                            onClick={() =>
-                              handleRaiseConcern(record.recordIndex)
-                            }
-                            data-ocid={`history.concern_button.${cardNum}`}
-                          >
-                            <AlertTriangle className="w-4 h-4" />
-                            {concernSaved ? "View Concern" : "Raised Concern"}
-                          </Button>
-                        )}
+                        {/* Raised Concern button — full width, always visible */}
+                        <Button
+                          className={
+                            isWithin24h(record)
+                              ? "w-full gap-2 bg-red-600 hover:bg-red-700 text-white font-bold"
+                              : "w-full gap-2 bg-gray-500 hover:bg-gray-600 text-white font-bold"
+                          }
+                          size="sm"
+                          onClick={() => handleRaiseConcern(record.recordIndex)}
+                          data-ocid={`history.concern_button.${cardNum}`}
+                        >
+                          <AlertTriangle className="w-4 h-4" />
+                          {concernSaved ? "View Concern" : "Raised Concern"}
+                        </Button>
                         <div className="flex items-center justify-between gap-2">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>

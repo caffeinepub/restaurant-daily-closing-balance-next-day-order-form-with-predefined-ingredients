@@ -19,6 +19,17 @@ export default function UserLoginPage() {
   const [retrying, setRetrying] = useState(false);
   const [failCount, setFailCount] = useState(0);
 
+  // Multi-restaurant picker state
+  const [showRestaurantPicker, setShowRestaurantPicker] = useState(false);
+  const [availableRestaurants, setAvailableRestaurants] = useState<string[]>(
+    [],
+  );
+  const [pendingUser, setPendingUser] = useState<{
+    username: string;
+    password: string;
+    restaurantName: string;
+  } | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -26,7 +37,6 @@ export default function UserLoginPage() {
     setRetrying(false);
     resetActorCache();
 
-    // Show "Retrying..." after a short delay to let user know retries are happening
     const retryTimer = setTimeout(() => setRetrying(true), 2000);
 
     try {
@@ -37,9 +47,24 @@ export default function UserLoginPage() {
         setError(
           "Invalid username or password. Please check your credentials.",
         );
+        setLoading(false);
+        setRetrying(false);
         return;
       }
-      login(user.username, user.password, user.restaurantName);
+      const restaurants = user.restaurantName
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (restaurants.length > 1) {
+        setPendingUser(user);
+        setAvailableRestaurants(restaurants);
+        setShowRestaurantPicker(true);
+        setLoading(false);
+        setRetrying(false);
+        clearTimeout(retryTimer);
+        return;
+      }
+      login(user.username, user.password, user.restaurantName.trim());
       navigate({ to: "/" });
     } catch (err) {
       clearTimeout(retryTimer);
@@ -81,7 +106,7 @@ export default function UserLoginPage() {
           <div className="w-20 h-20 rounded-2xl overflow-hidden mx-auto mb-4 shadow-md">
             <img
               src="/assets/uploads/logo-app-draft-2.jpg"
-              alt="Shri Hoshnagi F&B"
+              alt="Shri Hoshnagi F&B Opp."
               className="w-full h-full object-cover"
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = "none";
@@ -89,7 +114,7 @@ export default function UserLoginPage() {
             />
           </div>
           <h1 className="text-2xl font-bold text-foreground">
-            Shri Hoshnagi F&amp;B
+            Shri Hoshnagi F&amp;B Opp.
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Daily closing &amp; order tracker
@@ -189,9 +214,38 @@ export default function UserLoginPage() {
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-4">
-          &copy; {new Date().getFullYear()} Shri Hoshnagi F&amp;B
+          &copy; {new Date().getFullYear()} Shri Hoshnagi F&amp;B Opp.
         </p>
       </div>
+
+      {/* Multi-restaurant picker overlay */}
+      {showRestaurantPicker && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">Select Restaurant</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {availableRestaurants.map((r) => (
+                <Button
+                  key={r}
+                  variant="outline"
+                  className="w-full justify-start font-semibold text-base"
+                  data-ocid="login.restaurant.button"
+                  onClick={() => {
+                    if (pendingUser) {
+                      login(pendingUser.username, pendingUser.password, r);
+                      navigate({ to: "/" });
+                    }
+                  }}
+                >
+                  {r}
+                </Button>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

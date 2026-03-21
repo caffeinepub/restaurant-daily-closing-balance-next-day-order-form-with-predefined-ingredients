@@ -98,7 +98,7 @@ function RestaurantMasterTab() {
   const [editingUser, setEditingUser] = useState<RestaurantUser | null>(null);
   const [uUsername, setUUsername] = useState("");
   const [uPassword, setUPassword] = useState("");
-  const [uRestaurant, setURestaurant] = useState("");
+  const [uRestaurants, setURestaurants] = useState<string[]>([]);
   const [deleteUsername, setDeleteUsername] = useState<string | null>(null);
 
   const reload = () => {
@@ -157,24 +157,40 @@ function RestaurantMasterTab() {
     setEditingUser(null);
     setUUsername("");
     setUPassword("");
-    setURestaurant("");
+    setURestaurants([]);
     setShowUserDialog(true);
   };
   const openEditUser = (u: RestaurantUser) => {
     setEditingUser(u);
     setUUsername(u.username);
     setUPassword(u.password);
-    setURestaurant(u.restaurantName);
+    setURestaurants(
+      u.restaurantName
+        ? u.restaurantName
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : [],
+    );
     setShowUserDialog(true);
   };
   const saveUser = async () => {
-    if (!uUsername.trim() || !uPassword.trim() || !uRestaurant) return;
+    if (!uUsername.trim() || !uPassword.trim() || uRestaurants.length === 0)
+      return;
     try {
       if (editingUser) {
-        await updateUser(uUsername.trim(), uPassword.trim(), uRestaurant);
+        await updateUser(
+          uUsername.trim(),
+          uPassword.trim(),
+          uRestaurants.join(","),
+        );
         toast.success("User updated.");
       } else {
-        await addUser(uUsername.trim(), uPassword.trim(), uRestaurant);
+        await addUser(
+          uUsername.trim(),
+          uPassword.trim(),
+          uRestaurants.join(","),
+        );
         toast.success("User added.");
       }
       setShowUserDialog(false);
@@ -409,19 +425,42 @@ function RestaurantMasterTab() {
               />
             </div>
             <div>
-              <Label>Restaurant</Label>
-              <Select value={uRestaurant} onValueChange={setURestaurant}>
-                <SelectTrigger data-ocid="admin.user.select">
-                  <SelectValue placeholder="Select restaurant" />
-                </SelectTrigger>
-                <SelectContent>
-                  {restaurants.map((r) => (
-                    <SelectItem key={r.id} value={r.name}>
+              <Label>Restaurants (select one or more)</Label>
+              <div
+                className="mt-2 space-y-2 border rounded p-3 max-h-48 overflow-y-auto"
+                data-ocid="admin.user.select"
+              >
+                {restaurants.map((r) => (
+                  <div key={r.id} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id={`rest-${r.id}`}
+                      checked={uRestaurants.includes(r.name)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setURestaurants((prev) => [...prev, r.name]);
+                        } else {
+                          setURestaurants((prev) =>
+                            prev.filter((n) => n !== r.name),
+                          );
+                        }
+                      }}
+                      className="w-4 h-4 cursor-pointer"
+                    />
+                    <label
+                      htmlFor={`rest-${r.id}`}
+                      className="text-sm cursor-pointer"
+                    >
                       {r.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </label>
+                  </div>
+                ))}
+                {restaurants.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    No restaurants available. Add restaurants first.
+                  </p>
+                )}
+              </div>
             </div>
           </div>
           <DialogFooter>
