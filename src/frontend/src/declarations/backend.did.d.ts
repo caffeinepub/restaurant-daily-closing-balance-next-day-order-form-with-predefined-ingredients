@@ -24,6 +24,7 @@ export interface UserProfile { 'name' : string, 'restaurantName' : string }
 
 export interface _SERVICE {
   'seedDefaultData' : ActorMethod<[], undefined>,
+  'resetToDefaultCredentials' : ActorMethod<[], undefined>,
   'addDailyRecord' : ActorMethod<[Array<Meal>, Timestamp, string], bigint>,
   'getAllDailyRecords' : ActorMethod<[], Array<DailyRecord>>,
   'getRestaurants' : ActorMethod<[], Array<Restaurant>>,

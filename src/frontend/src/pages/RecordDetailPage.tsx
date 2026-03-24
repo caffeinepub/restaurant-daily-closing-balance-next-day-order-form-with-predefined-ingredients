@@ -21,7 +21,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import BackendConnectionErrorCard from "../components/BackendConnectionErrorCard";
 import RecordEntryRowMobile from "../components/RecordEntryRowMobile";
-import { CATEGORIES } from "../data/predefinedIngredients";
 import { useActorDiagnostics } from "../hooks/useActorDiagnostics";
 import { useGetAllDailyRecords } from "../hooks/useQueries";
 import { exportRecordToCSV } from "../utils/csvExport";
@@ -63,6 +62,11 @@ export default function RecordDetailPage() {
           return true;
         })
     : undefined;
+
+  // Derive categories dynamically from the record entries (supports any category)
+  const recordCategories = record
+    ? [...new Set(record.entries.map((e) => e.category))]
+    : [];
 
   const handleExport = () => {
     if (!record) return;
@@ -184,8 +188,7 @@ export default function RecordDetailPage() {
                 {formatDateDDMMYYYY(record.timestamp)}
               </CardDescription>
               <div className="text-xs text-muted-foreground mt-1">
-                Categories:{" "}
-                {[...new Set(record.entries.map((e) => e.category))].join(", ")}
+                Categories: {recordCategories.join(", ")}
               </div>
             </div>
             {/* Desktop action buttons - hidden on mobile */}
@@ -218,7 +221,7 @@ export default function RecordDetailPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-8">
-            {CATEGORIES.map((category) => {
+            {recordCategories.map((category) => {
               const categoryEntries = record.entries.filter(
                 (entry) => entry.category === category,
               );

@@ -1,4 +1,3 @@
-import { CATEGORIES } from "../data/predefinedIngredients";
 import type { SavedDailyRecord } from "../types/dailyForm";
 
 /**
@@ -22,7 +21,10 @@ export function formatRecordAsPlainText(record: SavedDailyRecord): string {
   text += `Order Date: ${formattedOrderDate}\n`;
   text += `${"=".repeat(30)}\n\n`;
 
-  for (const category of CATEGORIES) {
+  // Use dynamic categories derived from the record entries (preserves order)
+  const categories = [...new Set(record.entries.map((e) => e.category))];
+
+  for (const category of categories) {
     const categoryEntries = record.entries.filter(
       (entry) => entry.category === category && entry.nextDayOrder > 0,
     );

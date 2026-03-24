@@ -45,7 +45,9 @@ export interface Category { name: string; }
 export interface UserProfile { name: string; restaurantName: string; }
 
 export interface backendInterface {
+    _initializeAccessControlWithSecret(secret: string): Promise<void>;
     seedDefaultData(): Promise<void>;
+    resetToDefaultCredentials(): Promise<void>;
     addDailyRecord(meals: Array<Meal>, timestamp: Timestamp, restaurantName: string): Promise<bigint>;
     getAllDailyRecords(): Promise<Array<DailyRecord>>;
     getRestaurants(): Promise<Array<Restaurant>>;
@@ -88,6 +90,7 @@ export class Backend implements backendInterface {
     }
 
     seedDefaultData(): Promise<void> { return this.call(() => this.actor.seedDefaultData()); }
+    resetToDefaultCredentials(): Promise<void> { return this.call(() => this.actor.resetToDefaultCredentials()); }
     addDailyRecord(meals: Array<Meal>, timestamp: Timestamp, restaurantName: string): Promise<bigint> {
         return this.call(() => this.actor.addDailyRecord(meals, timestamp, restaurantName));
     }
@@ -125,6 +128,7 @@ export class Backend implements backendInterface {
     verifyAdminPassword(password: string): Promise<boolean> { return this.call(() => this.actor.verifyAdminPassword(password)); }
     setAdminPassword(newPassword: string): Promise<void> { return this.call(() => this.actor.setAdminPassword(newPassword)); }
     getAllCategories(): Promise<Array<Category>> { return this.call(() => this.actor.getAllCategories()); }
+    _initializeAccessControlWithSecret(_secret: string): Promise<void> { return Promise.resolve(); }
     getIngredientsByCategory(category: string): Promise<Array<Ingredient>> {
         return this.call(() => this.actor.getIngredientsByCategory(category));
     }

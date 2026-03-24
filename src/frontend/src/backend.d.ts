@@ -11,6 +11,7 @@ export interface RawMaterial { id: string; name: string; category: string; }
 export interface BackendActor {
   // Seed
   seedDefaultData: () => Promise<void>;
+  resetToDefaultCredentials: () => Promise<void>;
   // Daily records
   addDailyRecord: (meals: Meal[], timestamp: bigint, restaurantName: string) => Promise<bigint>;
   getAllDailyRecords: () => Promise<DailyRecord[]>;

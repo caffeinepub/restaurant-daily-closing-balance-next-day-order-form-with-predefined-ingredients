@@ -36,6 +36,10 @@ import { Loader2, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import BackendConnectionErrorCard from "../components/BackendConnectionErrorCard";
+import {
+  CATEGORIES,
+  PREDEFINED_INGREDIENTS,
+} from "../data/predefinedIngredients";
 import { useActorDiagnostics } from "../hooks/useActorDiagnostics";
 import { useAddDailyRecord, useGetAllDailyRecords } from "../hooks/useQueries";
 import { useRestaurantSession } from "../hooks/useRestaurantSession";
@@ -70,7 +74,7 @@ export default function DailyEntryPage() {
   const [balanceDate, setBalanceDate] = useState("");
 
   // Dynamic categories/ingredients from masterData
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<string[]>([...CATEGORIES]);
 
   // Step state
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -98,6 +102,9 @@ export default function DailyEntryPage() {
     newItem: CartItem;
   } | null>(null);
 
+  // Keyboard height detection for floating Add Item button
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
   const searchInputRef = useRef<HTMLInputElement>(null);
   const addItemButtonRef = useRef<HTMLButtonElement>(null);
   const balanceInputRef = useRef<HTMLInputElement>(null);
@@ -110,17 +117,63 @@ export default function DailyEntryPage() {
     }
   }, [session, navigate]);
 
-  // Load categories from masterData
+  // Detect virtual keyboard via visualViewport API
   useEffect(() => {
-    getMasterCategories().then((cats) =>
-      setCategories(cats.map((c) => c.name)),
-    );
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const handler = () => {
+      const kbHeight = window.innerHeight - vv.height - vv.offsetTop;
+      setKeyboardHeight(kbHeight > 50 ? kbHeight : 0);
+    };
+    vv.addEventListener("resize", handler);
+    vv.addEventListener("scroll", handler);
+    return () => {
+      vv.removeEventListener("resize", handler);
+      vv.removeEventListener("scroll", handler);
+    };
+  }, []);
+
+  // Load categories from masterData, fall back to static CATEGORIES
+  useEffect(() => {
+    getMasterCategories()
+      .then((cats) => {
+        if (cats && cats.length > 0) {
+          setCategories(cats.map((c) => c.name));
+        }
+      })
+      .catch(() => {
+        // Keep static fallback on error
+      });
   }, []);
 
   // Load ingredient options when selectedCategory changes
   useEffect(() => {
     if (selectedCategory) {
-      getRawMaterialsByCategory(selectedCategory).then(setIngredientOptions);
+      getRawMaterialsByCategory(selectedCategory)
+        .then((items) => {
+          if (items && items.length > 0) {
+            setIngredientOptions(items);
+          } else {
+            const fallback = PREDEFINED_INGREDIENTS.filter(
+              (ing) => ing.category === selectedCategory,
+            ).map((ing, i) => ({
+              id: String(i),
+              name: ing.name,
+              category: ing.category,
+            }));
+            setIngredientOptions(fallback);
+          }
+        })
+        .catch(() => {
+          const fallback = PREDEFINED_INGREDIENTS.filter(
+            (ing) => ing.category === selectedCategory,
+          ).map((ing, i) => ({
+            id: String(i),
+            name: ing.name,
+            category: ing.category,
+          }));
+          setIngredientOptions(fallback);
+        });
     } else {
       setIngredientOptions([]);
     }
@@ -386,6 +439,9 @@ export default function DailyEntryPage() {
     );
   }
 
+  // Whether to show the floating Add Item button (keyboard is open)
+  const showFloatingAddBtn = selectedCategory && keyboardHeight > 0;
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header Card */}
@@ -434,14 +490,14 @@ export default function DailyEntryPage() {
               disabled={isStepDisabled}
             >
               <SelectTrigger
-                className="w-full"
+                className="w-full text-[21px]"
                 data-ocid="entry.category.select"
               >
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
                 {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
+                  <SelectItem key={cat} value={cat} className="text-[21px]">
                     {cat}
                   </SelectItem>
                 ))}
@@ -456,7 +512,7 @@ export default function DailyEntryPage() {
                 Step 2: Search &amp; Add
               </CardTitle>
 
-              {/* Search with results ABOVE — placed first so it appears above Balance/Order */}
+              {/* Search with results ABOVE */}
               <div className="relative mb-3">
                 {showDropdown && filteredIngredients.length > 0 && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 bg-gray-950 border border-gray-800 rounded-lg shadow-xl z-50 max-h-56 overflow-y-auto">
@@ -464,7 +520,7 @@ export default function DailyEntryPage() {
                       <button
                         key={m.id}
                         type="button"
-                        className="w-full text-left px-4 py-2.5 text-white font-bold text-sm hover:bg-gray-800 transition-colors"
+                        className="w-full text-left px-4 py-2.5 text-white font-bold text-[21px] hover:bg-gray-800 transition-colors"
                         onMouseDown={(e) => {
                           e.preventDefault();
                           handleSelectIngredient(m.name);
@@ -543,23 +599,19 @@ export default function DailyEntryPage() {
                 </div>
               </div>
 
-              {/* Add Item Button */}
-              <Button
-                ref={addItemButtonRef}
-                onClick={handleAddItem}
-                className="w-full mt-3 bg-navy-700 hover:bg-navy-800 text-white font-bold text-base gap-2"
-                style={{ background: "#1a3a5c" }}
-                data-ocid="entry.add.primary_button"
-                onFocus={() =>
-                  addItemButtonRef.current?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "nearest",
-                  })
-                }
-              >
-                <Plus className="w-4 h-4" />
-                {editingIndex !== null ? "Update Item" : "+ Add Item"}
-              </Button>
+              {/* Inline Add Item Button — hidden when keyboard is open (floating version shown instead) */}
+              {!showFloatingAddBtn && (
+                <Button
+                  ref={addItemButtonRef}
+                  onClick={handleAddItem}
+                  className="w-full mt-3 bg-navy-700 hover:bg-navy-800 text-white font-bold text-base gap-2"
+                  style={{ background: "#1a3a5c" }}
+                  data-ocid="entry.add.primary_button"
+                >
+                  <Plus className="w-4 h-4" />
+                  {editingIndex !== null ? "Update Item" : "+ Add Item"}
+                </Button>
+              )}
             </div>
           )}
         </CardContent>
@@ -640,6 +692,33 @@ export default function DailyEntryPage() {
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {/* Floating Add Item button — pinned just above the keyboard when keyboard is open */}
+      {showFloatingAddBtn && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: keyboardHeight,
+            left: 0,
+            right: 0,
+            zIndex: 100,
+            padding: "8px 16px",
+            background: "white",
+            borderTop: "1px solid #e5e7eb",
+            boxShadow: "0 -2px 8px rgba(0,0,0,0.12)",
+          }}
+        >
+          <Button
+            onClick={handleAddItem}
+            className="w-full font-bold text-base gap-2"
+            style={{ background: "#1a3a5c", color: "white" }}
+            data-ocid="entry.add.primary_button"
+          >
+            <Plus className="w-4 h-4" />
+            {editingIndex !== null ? "Update Item" : "+ Add Item"}
+          </Button>
+        </div>
       )}
 
       {/* Duplicate Alert */}

@@ -69,6 +69,7 @@ export const idlFactory = ({ IDL }) => {
   return IDL.Service({
     // Seed
     'seedDefaultData' : IDL.Func([], [], []),
+    'resetToDefaultCredentials' : IDL.Func([], [], []),
     // Daily records
     'addDailyRecord' : IDL.Func([IDL.Vec(Meal), Timestamp, IDL.Text], [IDL.Nat], []),
     'getAllDailyRecords' : IDL.Func([], [IDL.Vec(DailyRecord)], ['query']),

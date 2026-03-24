@@ -3,14 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Loader2, LogIn, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { Loader2, LogIn, RotateCcw, ShieldCheck } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useRestaurantSession } from "../hooks/useRestaurantSession";
 import { resetActorCache } from "../utils/backendClient";
-import { loginUser } from "../utils/masterData";
+import { loginUser, resetToDefaultCredentials } from "../utils/masterData";
 
 export default function UserLoginPage() {
-  const { login } = useRestaurantSession();
+  const { login, session } = useRestaurantSession();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -18,6 +18,7 @@ export default function UserLoginPage() {
   const [loading, setLoading] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [failCount, setFailCount] = useState(0);
+  const [resetting, setResetting] = useState(false);
 
   // Multi-restaurant picker state
   const [showRestaurantPicker, setShowRestaurantPicker] = useState(false);
@@ -29,6 +30,13 @@ export default function UserLoginPage() {
     password: string;
     restaurantName: string;
   } | null>(null);
+
+  // If user already has a valid session (e.g. pressed back button), redirect to home
+  useEffect(() => {
+    if (session) {
+      navigate({ to: "/" });
+    }
+  }, [session, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,6 +106,21 @@ export default function UserLoginPage() {
     }
   };
 
+  const handleReset = async () => {
+    setResetting(true);
+    try {
+      resetActorCache();
+      await resetToDefaultCredentials();
+      setError("✓ Credentials reset to defaults. Try: andaaz / andaaz123");
+      setUsername("andaaz");
+      setPassword("andaaz123");
+    } catch {
+      setError("Reset failed. Please try again.");
+    } finally {
+      setResetting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
@@ -157,7 +180,11 @@ export default function UserLoginPage() {
               {error && (
                 <div className="space-y-2">
                   <p
-                    className="text-sm text-destructive font-medium border border-destructive rounded px-3 py-2"
+                    className={`text-sm font-medium border rounded px-3 py-2 ${
+                      error.startsWith("✓")
+                        ? "text-green-700 border-green-400 bg-green-50"
+                        : "text-destructive border-destructive"
+                    }`}
                     data-ocid="login.error_state"
                   >
                     {error}
@@ -203,7 +230,7 @@ export default function UserLoginPage() {
         </Card>
 
         {/* Admin access link */}
-        <div className="mt-4 text-center">
+        <div className="mt-4 text-center space-y-2">
           <Link
             to="/admin"
             className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -211,6 +238,26 @@ export default function UserLoginPage() {
             <ShieldCheck className="w-3.5 h-3.5" />
             Admin Panel Login
           </Link>
+
+          {/* Emergency reset — shown only after 2+ failed attempts */}
+          {failCount >= 2 && (
+            <div>
+              <button
+                type="button"
+                onClick={handleReset}
+                disabled={resetting}
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors underline underline-offset-2 disabled:opacity-50"
+                data-ocid="login.secondary_button"
+              >
+                {resetting ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <RotateCcw className="w-3 h-3" />
+                )}
+                Reset to default passwords
+              </button>
+            </div>
+          )}
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-4">

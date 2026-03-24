@@ -35,6 +35,12 @@ export async function initMasterData(): Promise<void> {
   }
 }
 
+// --- Emergency credential reset ---
+export async function resetToDefaultCredentials(): Promise<void> {
+  const actor = await getFreshActor();
+  await actor.resetToDefaultCredentials();
+}
+
 // --- Admin Password ---
 export async function setAdminPassword(newPassword: string): Promise<void> {
   const actor = await getAnonActor();
@@ -112,8 +118,12 @@ export async function loginUser(
     try {
       // Always get a fresh actor for login to avoid stale cached connections
       const actor = await getFreshActor();
-      // Ensure default users exist (non-blocking, best effort)
-      actor.seedDefaultData().catch(() => {});
+      // Ensure default users exist — await so they're available before login check
+      try {
+        await actor.seedDefaultData();
+      } catch {
+        /* silent */
+      }
       const result = await actor.verifyUserLogin(username, password);
       if (result.length > 0) {
         return { username, password: "", restaurantName: result[0] as string };
