@@ -1,11 +1,16 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ClipboardList, History } from "lucide-react";
+import { History, Warehouse } from "lucide-react";
 import DailyEntryForm from "../components/DailyEntryForm";
 import HistoryContent from "../components/HistoryContent";
 
-const BAL_CATEGORIES = ["Vegetables", "Dairy", "Non-Veg", "Others"];
+const STORE_CATEGORIES = [
+  "Dry Store",
+  "Housekeeping",
+  "Beverages",
+  "Disposable",
+];
 
-export default function DailyEntryPage() {
+export default function StoreIndentsPage() {
   return (
     <Tabs defaultValue="entry" className="w-full">
       <TabsList className="w-full mb-4">
@@ -14,7 +19,7 @@ export default function DailyEntryPage() {
           className="flex-1 gap-1.5"
           style={{ background: "#E8F5E9", color: "#2e7d32", fontWeight: 600 }}
         >
-          <ClipboardList className="w-4 h-4" />
+          <Warehouse className="w-4 h-4" />
           Entry
         </TabsTrigger>
         <TabsTrigger
@@ -28,13 +33,13 @@ export default function DailyEntryPage() {
       </TabsList>
       <TabsContent value="entry">
         <DailyEntryForm
-          title="Daily Entry — Bal &amp; Order"
-          categoryFilter={BAL_CATEGORIES}
-          ocidPrefix="entry"
+          title="Store Indents"
+          categoryFilter={STORE_CATEGORIES}
+          ocidPrefix="store"
         />
       </TabsContent>
       <TabsContent value="history">
-        <HistoryContent title="Bal &amp; Order History" />
+        <HistoryContent title="Store Indents History" />
       </TabsContent>
     </Tabs>
   );

@@ -20,7 +20,6 @@ export default function UserLoginPage() {
   const [failCount, setFailCount] = useState(0);
   const [resetting, setResetting] = useState(false);
 
-  // Multi-restaurant picker state
   const [showRestaurantPicker, setShowRestaurantPicker] = useState(false);
   const [availableRestaurants, setAvailableRestaurants] = useState<string[]>(
     [],
@@ -31,7 +30,6 @@ export default function UserLoginPage() {
     restaurantName: string;
   } | null>(null);
 
-  // If user already has a valid session (e.g. pressed back button), redirect to home
   useEffect(() => {
     if (session) {
       navigate({ to: "/" });
@@ -144,7 +142,7 @@ export default function UserLoginPage() {
           </p>
         </div>
 
-        <Card>
+        <Card style={{ background: "#FFF0E0", border: "1.5px solid #E07820" }}>
           <CardHeader>
             <CardTitle className="text-lg">Sign In</CardTitle>
           </CardHeader>
@@ -239,7 +237,6 @@ export default function UserLoginPage() {
             Admin Panel Login
           </Link>
 
-          {/* Emergency reset — shown only after 2+ failed attempts */}
           {failCount >= 2 && (
             <div>
               <button

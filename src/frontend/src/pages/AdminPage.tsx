@@ -43,6 +43,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "@tanstack/react-router";
 import {
+  BarChart2,
   Eye,
   EyeOff,
   KeyRound,
@@ -55,6 +56,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import AdminReportsTab from "../components/AdminReportsTab";
 import {
   type MasterCategory,
   type RawMaterial,
@@ -1220,6 +1222,10 @@ export default function AdminPage() {
               <TabsTrigger value="settings" data-ocid="admin.settings.tab">
                 Settings
               </TabsTrigger>
+              <TabsTrigger value="reports" data-ocid="admin.reports.tab">
+                <BarChart2 className="w-4 h-4 mr-1" />
+                Reports
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="restaurants">
               <RestaurantMasterTab />
@@ -1232,6 +1238,9 @@ export default function AdminPage() {
             </TabsContent>
             <TabsContent value="settings">
               <SettingsTab />
+            </TabsContent>
+            <TabsContent value="reports">
+              <AdminReportsTab />
             </TabsContent>
           </Tabs>
         </CardContent>

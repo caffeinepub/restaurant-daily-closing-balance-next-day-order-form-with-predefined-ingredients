@@ -13,8 +13,10 @@ import AppLayout from "./components/AppLayout";
 import AdminPage from "./pages/AdminPage";
 import DailyEntryPage from "./pages/DailyEntryPage";
 import HistoryPage from "./pages/HistoryPage";
+import NotActivePage from "./pages/NotActivePage";
 import RaisedConcernPage from "./pages/RaisedConcernPage";
 import RecordDetailPage from "./pages/RecordDetailPage";
+import StoreIndentsPage from "./pages/StoreIndentsPage";
 import UserLoginPage from "./pages/UserLoginPage";
 import { initMasterData } from "./utils/masterData";
 
@@ -40,6 +42,12 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   component: DailyEntryPage,
+});
+
+const storeIndentsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/store-indents",
+  component: StoreIndentsPage,
 });
 
 const historyRoute = createRoute({
@@ -72,13 +80,49 @@ const adminRoute = createRoute({
   component: AdminPage,
 });
 
+const wastageRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/wastage",
+  component: NotActivePage,
+});
+
+const receivingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/receiving",
+  component: NotActivePage,
+});
+
+const semifinishRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/semifinish",
+  component: NotActivePage,
+});
+
+const attendanceRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/attendance",
+  component: NotActivePage,
+});
+
+const repairRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/repair",
+  component: NotActivePage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  storeIndentsRoute,
   historyRoute,
   recordDetailRoute,
   concernRoute,
   loginRoute,
   adminRoute,
+  wastageRoute,
+  receivingRoute,
+  semifinishRoute,
+  attendanceRoute,
+  repairRoute,
 ]);
 
 const router = createRouter({ routeTree });
