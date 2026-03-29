@@ -13,6 +13,7 @@ import AppLayout from "./components/AppLayout";
 import AdminPage from "./pages/AdminPage";
 import DailyEntryPage from "./pages/DailyEntryPage";
 import HistoryPage from "./pages/HistoryPage";
+import HomePage from "./pages/HomePage";
 import NotActivePage from "./pages/NotActivePage";
 import RaisedConcernPage from "./pages/RaisedConcernPage";
 import RecordDetailPage from "./pages/RecordDetailPage";
@@ -41,6 +42,12 @@ const rootRoute = createRootRoute({
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
+  component: HomePage,
+});
+
+const dailyEntryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/daily-entry",
   component: DailyEntryPage,
 });
 
@@ -112,6 +119,7 @@ const repairRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  dailyEntryRoute,
   storeIndentsRoute,
   historyRoute,
   recordDetailRoute,

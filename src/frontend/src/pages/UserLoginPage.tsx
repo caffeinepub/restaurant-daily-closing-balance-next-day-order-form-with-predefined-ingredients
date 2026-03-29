@@ -70,7 +70,9 @@ export default function UserLoginPage() {
         clearTimeout(retryTimer);
         return;
       }
-      login(user.username, user.password, user.restaurantName.trim());
+      login(user.username, user.password, user.restaurantName.trim(), [
+        user.restaurantName.trim(),
+      ]);
       navigate({ to: "/" });
     } catch (err) {
       clearTimeout(retryTimer);
@@ -278,7 +280,12 @@ export default function UserLoginPage() {
                   data-ocid="login.restaurant.button"
                   onClick={() => {
                     if (pendingUser) {
-                      login(pendingUser.username, pendingUser.password, r);
+                      login(
+                        pendingUser.username,
+                        pendingUser.password,
+                        r,
+                        availableRestaurants,
+                      );
                       navigate({ to: "/" });
                     }
                   }}

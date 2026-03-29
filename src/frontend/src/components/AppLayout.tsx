@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { APP_VERSION } from "@/config/appVersion";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { LogOut } from "lucide-react";
+import { ChevronDown, LogOut } from "lucide-react";
+import { useRef, useState } from "react";
 import { SiCoffeescript } from "react-icons/si";
 import { useRestaurantSession } from "../hooks/useRestaurantSession";
 import BottomNavBar from "./BottomNavBar";
@@ -13,10 +14,16 @@ interface AppLayoutProps {
 export default function AppLayout({ children }: AppLayoutProps) {
   const router = useRouterState();
   const currentPath = router.location.pathname;
-  const { session, logout } = useRestaurantSession();
+  const { session, logout, switchRestaurant } = useRestaurantSession();
   const navigate = useNavigate();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  if (currentPath === "/login" || currentPath === "/admin") {
+  if (
+    currentPath === "/login" ||
+    currentPath === "/admin" ||
+    currentPath === "/"
+  ) {
     return <>{children}</>;
   }
 
@@ -24,6 +31,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
     logout();
     navigate({ to: "/login" });
   };
+
+  const isMultiRestaurant =
+    session?.availableRestaurants && session.availableRestaurants.length > 1;
 
   const showBottomNav = !!session;
 
@@ -37,10 +47,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
           boxShadow: "0 1px 4px rgba(224,120,32,0.15)",
         }}
       >
-        <div className="px-3 py-2 flex items-center justify-between">
-          {/* Left: Logo + Name */}
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-md overflow-hidden flex-shrink-0">
+        {/* Top row: Logo + App Name + Tagline + version + logout */}
+        <div className="px-3 pt-2 pb-1 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div
+              className="rounded-lg overflow-hidden flex-shrink-0 shadow-sm"
+              style={{ width: 52, height: 52 }}
+            >
               <img
                 src="/assets/uploads/logo-app-draft-2.jpg"
                 alt="Shri Hoshnagi F&B Opp."
@@ -54,23 +67,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </div>
             <div>
               <div
-                className="text-sm font-bold leading-tight"
-                style={{ color: "#7A3A00" }}
+                className="font-bold leading-tight"
+                style={{ color: "#7A3A00", fontSize: "15px" }}
               >
                 Shri Hoshnagi F&amp;B Opp.
               </div>
-              {session && (
-                <div
-                  className="text-xs leading-tight"
-                  style={{ color: "#B05A10" }}
-                >
-                  {session.restaurantName}
-                </div>
-              )}
+              <div
+                className="leading-tight"
+                style={{ color: "#B05A10", fontSize: "10px" }}
+              >
+                F &amp; B Control &amp; SOP Management
+              </div>
             </div>
           </div>
 
-          {/* Right: version, logout */}
           <div className="flex items-center gap-1">
             <span
               className="text-xs font-mono mr-1"
@@ -78,7 +88,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
             >
               v{APP_VERSION}
             </span>
-
             {session && (
               <Button
                 variant="ghost"
@@ -94,6 +103,92 @@ export default function AppLayout({ children }: AppLayoutProps) {
             )}
           </div>
         </div>
+
+        {/* Restaurant name row */}
+        {session && (
+          <div
+            className="px-3 pb-2"
+            style={{ borderTop: "1px solid rgba(224,120,32,0.2)" }}
+          >
+            {isMultiRestaurant ? (
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5"
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    padding: 0,
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setShowDropdown((v) => !v)}
+                  data-ocid="layout.restaurant.dropdown"
+                >
+                  <span
+                    className="font-bold leading-tight"
+                    style={{ color: "#7A3A00", fontSize: "22px" }}
+                  >
+                    {session.restaurantName}
+                  </span>
+                  <ChevronDown
+                    style={{
+                      width: 22,
+                      height: 22,
+                      color: "#E07820",
+                      flexShrink: 0,
+                      transform: showDropdown
+                        ? "rotate(180deg)"
+                        : "rotate(0deg)",
+                      transition: "transform 0.2s",
+                    }}
+                  />
+                </button>
+                {showDropdown && (
+                  <div
+                    className="absolute left-0 top-full mt-1 z-50 rounded-lg shadow-lg border overflow-hidden"
+                    style={{
+                      background: "#FFF8F0",
+                      borderColor: "#E07820",
+                      minWidth: "200px",
+                    }}
+                  >
+                    {session.availableRestaurants.map((r) => (
+                      <button
+                        type="button"
+                        key={r}
+                        className="w-full text-left px-4 py-3 font-semibold"
+                        style={{
+                          background:
+                            r === session.restaurantName
+                              ? "#FFE0B0"
+                              : "transparent",
+                          color: "#7A3A00",
+                          fontSize: "16px",
+                          borderBottom: "1px solid rgba(224,120,32,0.15)",
+                          cursor: "pointer",
+                        }}
+                        onClick={() => {
+                          switchRestaurant(r);
+                          setShowDropdown(false);
+                        }}
+                        data-ocid="layout.restaurant.option"
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <span
+                className="font-bold leading-tight block"
+                style={{ color: "#7A3A00", fontSize: "22px" }}
+              >
+                {session.restaurantName}
+              </span>
+            )}
+          </div>
+        )}
       </header>
 
       <main

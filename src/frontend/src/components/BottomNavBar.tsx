@@ -11,7 +11,7 @@ import {
 import { motion } from "motion/react";
 
 const TABS = [
-  { label: "BAL & ORDER", icon: ClipboardList, path: "/" },
+  { label: "BAL & ORDER", icon: ClipboardList, path: "/daily-entry" },
   { label: "STORE INDENTS", icon: Warehouse, path: "/store-indents" },
   { label: "WASTAGE REG.", icon: Trash2, path: "/wastage" },
   { label: "RECEIVING", icon: Truck, path: "/receiving" },
