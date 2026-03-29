@@ -8,20 +8,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart2, CalendarSearch, Download, Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useGetAllDailyRecords } from "../hooks/useQueries";
-import type { IngredientEntryData, SavedDailyRecord } from "../types/dailyForm";
+import type { SavedDailyRecord } from "../types/dailyForm";
 import { getRestaurants } from "../utils/masterData";
 
 function getLocalDateString(ts: bigint): string {
@@ -30,13 +22,26 @@ function getLocalDateString(ts: bigint): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function formatDate(ts: bigint): string {
+function formatCompactDate(ts: bigint): string {
   const ms = Number(ts);
   const d = new Date(ms);
   const day = String(d.getDate()).padStart(2, "0");
   const month = String(d.getMonth() + 1).padStart(2, "0");
-  const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
+  return `${day}/${month}`;
+}
+
+function getDateRange(fromDate: string, toDate: string): string[] {
+  const dates: string[] = [];
+  const start = new Date(fromDate);
+  const end = new Date(toDate);
+  const cur = new Date(start);
+  while (cur <= end) {
+    dates.push(
+      `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, "0")}-${String(cur.getDate()).padStart(2, "0")}`,
+    );
+    cur.setDate(cur.getDate() + 1);
+  }
+  return dates;
 }
 
 function filterByDateAndRestaurant(
@@ -56,44 +61,72 @@ function filterByDateAndRestaurant(
   });
 }
 
-function exportReportCSV(records: SavedDailyRecord[], reportType: string) {
+function exportPivotCSV(
+  records: SavedDailyRecord[],
+  reportType: string,
+  dates: string[],
+  itemNames: string[],
+) {
   const showBalance = reportType === "balance" || reportType === "both";
   const showOrder = reportType === "order" || reportType === "both";
 
-  const headers = [
-    "Order No.",
-    "Restaurant",
-    "Balance Date",
-    "Category",
-    "Item Name",
-  ];
-  if (showBalance) headers.push("Closing Balance");
-  if (showOrder) headers.push("Order Qty");
-
-  const rows: string[][] = [];
+  // Build a lookup: itemName -> dateKey -> {balance, order}
+  const lookup: Record<
+    string,
+    Record<string, { balance: number; order: number }>
+  > = {};
   for (const record of records) {
+    const dk = getLocalDateString(record.timestamp);
     for (const entry of record.entries) {
-      const row = [
-        `#${record.orderNo}`,
-        record.restaurantName,
-        formatDate(record.timestamp),
-        entry.category,
-        entry.name,
-      ];
-      if (showBalance) row.push(String(entry.closingBalance));
-      if (showOrder) row.push(String(entry.nextDayOrder));
-      rows.push(row);
+      if (!lookup[entry.name]) lookup[entry.name] = {};
+      lookup[entry.name][dk] = {
+        balance: entry.closingBalance,
+        order: entry.nextDayOrder,
+      };
     }
   }
 
-  const csv = [headers, ...rows]
-    .map((r) => r.map((c) => `"${c}"`).join(","))
-    .join("\n");
+  // Header rows
+  const headerRow1 = ["Item Name"];
+  const headerRow2 = [""];
+  for (const dk of dates) {
+    const d = new Date(dk);
+    const label = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (showBalance && showOrder) {
+      headerRow1.push(label, "");
+      headerRow2.push("Balance", "Order");
+    } else if (showBalance) {
+      headerRow1.push(label);
+      headerRow2.push("Balance");
+    } else {
+      headerRow1.push(label);
+      headerRow2.push("Order");
+    }
+  }
+
+  const rows: string[][] = [headerRow1, headerRow2];
+  for (const item of itemNames) {
+    const row = [item];
+    for (const dk of dates) {
+      const val = lookup[item]?.[dk];
+      if (showBalance && showOrder) {
+        row.push(val ? String(val.balance) : "—");
+        row.push(val ? String(val.order) : "—");
+      } else if (showBalance) {
+        row.push(val ? String(val.balance) : "—");
+      } else {
+        row.push(val ? String(val.order) : "—");
+      }
+    }
+    rows.push(row);
+  }
+
+  const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `report-${reportType}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `report-pivot-${reportType}-${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -135,23 +168,46 @@ function ReportPanel({ reportType, records, restaurants }: ReportPanelProps) {
     setHasSearched(true);
   };
 
-  // Flatten entries for table display
-  const rows: Array<{
-    orderNo: number;
-    restaurantName: string;
-    date: string;
-    entry: IngredientEntryData;
-  }> = [];
+  // Build pivot data
+  const dates =
+    hasSearched && fromDate && toDate ? getDateRange(fromDate, toDate) : [];
+
+  // Only include dates that have at least one record
+  const datesWithData = dates.filter((dk) =>
+    filteredRecords.some((r) => getLocalDateString(r.timestamp) === dk),
+  );
+
+  // Collect all unique item names
+  const itemNames = Array.from(
+    new Set(filteredRecords.flatMap((r) => r.entries.map((e) => e.name))),
+  ).sort();
+
+  // Build lookup: itemName -> dateKey -> {balance, order}
+  const lookup: Record<
+    string,
+    Record<string, { balance: number; order: number }>
+  > = {};
   for (const record of filteredRecords) {
+    const dk = getLocalDateString(record.timestamp);
     for (const entry of record.entries) {
-      rows.push({
-        orderNo: record.orderNo,
-        restaurantName: record.restaurantName,
-        date: formatDate(record.timestamp),
-        entry,
-      });
+      if (!lookup[entry.name]) lookup[entry.name] = {};
+      lookup[entry.name][dk] = {
+        balance: entry.closingBalance,
+        order: entry.nextDayOrder,
+      };
     }
   }
+
+  // Build compact date label map for display
+  const dateLabelMap: Record<string, string> = {};
+  for (const dk of datesWithData) {
+    const d = new Date(dk);
+    const ts = BigInt(d.getTime());
+    dateLabelMap[dk] = formatCompactDate(ts);
+  }
+
+  const subColCount = showBalance && showOrder ? 2 : 1;
+  const totalDataCols = datesWithData.length * subColCount;
 
   return (
     <div className="space-y-4">
@@ -201,6 +257,7 @@ function ReportPanel({ reportType, records, restaurants }: ReportPanelProps) {
         <Button
           onClick={handleSearch}
           className="gap-2 bg-gray-900 hover:bg-gray-800 text-white font-bold"
+          data-ocid="reports.search_button"
         >
           <Search className="w-4 h-4" />
           Search
@@ -209,7 +266,15 @@ function ReportPanel({ reportType, records, restaurants }: ReportPanelProps) {
           <Button
             variant="outline"
             className="gap-2"
-            onClick={() => exportReportCSV(filteredRecords, reportType)}
+            onClick={() =>
+              exportPivotCSV(
+                filteredRecords,
+                reportType,
+                datesWithData,
+                itemNames,
+              )
+            }
+            data-ocid="reports.export_button"
           >
             <Download className="w-4 h-4" />
             Export CSV
@@ -228,7 +293,7 @@ function ReportPanel({ reportType, records, restaurants }: ReportPanelProps) {
             Choose a restaurant, set a date range, and tap Search.
           </p>
         </div>
-      ) : rows.length === 0 ? (
+      ) : itemNames.length === 0 ? (
         <div className="text-center py-14">
           <CalendarSearch className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-base font-semibold">No records found</p>
@@ -237,57 +302,106 @@ function ReportPanel({ reportType, records, restaurants }: ReportPanelProps) {
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <p className="text-xs text-muted-foreground mb-2">
-            {rows.length} item entr{rows.length !== 1 ? "ies" : "y"} across{" "}
-            {filteredRecords.length} order
-            {filteredRecords.length !== 1 ? "s" : ""} for{" "}
-            <span className="font-semibold">{restaurant}</span>
+        <div className="overflow-x-auto rounded-lg border">
+          <p className="text-xs text-muted-foreground px-3 pt-2 pb-1">
+            {itemNames.length} item{itemNames.length !== 1 ? "s" : ""} across{" "}
+            {datesWithData.length} date{datesWithData.length !== 1 ? "s" : ""}{" "}
+            for <span className="font-semibold">{restaurant}</span>
           </p>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[80px]">Order No.</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Item Name</TableHead>
-                {showBalance && (
-                  <TableHead className="text-right">Closing Balance</TableHead>
-                )}
-                {showOrder && (
-                  <TableHead className="text-right">Order Qty</TableHead>
-                )}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row, i) => (
-                <TableRow key={`${row.orderNo}-${i}-${row.entry.name}`}>
-                  <TableCell className="font-bold text-center">
-                    #{row.orderNo}
-                  </TableCell>
-                  <TableCell>{row.date}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {row.entry.category}
-                  </TableCell>
-                  <TableCell>{row.entry.name}</TableCell>
-                  {showBalance && (
-                    <TableCell className="text-right font-mono">
-                      {row.entry.closingBalance > 0
-                        ? row.entry.closingBalance
-                        : "—"}
-                    </TableCell>
-                  )}
-                  {showOrder && (
-                    <TableCell className="text-right font-mono">
-                      {row.entry.nextDayOrder > 0
-                        ? row.entry.nextDayOrder
-                        : "—"}
-                    </TableCell>
-                  )}
-                </TableRow>
+          <table
+            className="w-full text-sm border-collapse"
+            style={{ minWidth: `${200 + totalDataCols * 70}px` }}
+          >
+            <thead>
+              {/* Row 1: Item Name + date headers spanning sub-cols */}
+              <tr className="bg-muted/80">
+                <th
+                  className="text-left px-3 py-2 font-semibold border-r border-b border-border"
+                  style={{
+                    position: "sticky",
+                    left: 0,
+                    background: "#f3f4f6",
+                    zIndex: 2,
+                    minWidth: 160,
+                  }}
+                  rowSpan={2}
+                >
+                  Item Name
+                </th>
+                {datesWithData.map((dk) => (
+                  <th
+                    key={dk}
+                    colSpan={subColCount}
+                    className="text-center px-2 py-1.5 font-semibold border-r border-b border-border text-xs"
+                    style={{ minWidth: subColCount === 2 ? 120 : 70 }}
+                  >
+                    {dateLabelMap[dk]}
+                  </th>
+                ))}
+              </tr>
+              {/* Row 2: sub-column labels */}
+              <tr className="bg-muted/50">
+                {datesWithData.map((dk) => (
+                  <Fragment key={dk}>
+                    {showBalance && (
+                      <th
+                        className="text-center px-1 py-1 text-xs font-medium border-r border-b border-border text-muted-foreground"
+                        style={{ minWidth: 55 }}
+                      >
+                        Bal
+                      </th>
+                    )}
+                    {showOrder && (
+                      <th
+                        className="text-center px-1 py-1 text-xs font-medium border-r border-b border-border text-muted-foreground"
+                        style={{ minWidth: 55 }}
+                      >
+                        Ord
+                      </th>
+                    )}
+                  </Fragment>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {itemNames.map((item, idx) => (
+                <tr
+                  key={item}
+                  className={idx % 2 === 0 ? "bg-white" : "bg-muted/20"}
+                >
+                  <td
+                    className="px-3 py-1.5 font-medium border-r border-border text-xs"
+                    style={{
+                      position: "sticky",
+                      left: 0,
+                      background: idx % 2 === 0 ? "white" : "#f9f9f9",
+                      zIndex: 1,
+                      minWidth: 160,
+                    }}
+                  >
+                    {item}
+                  </td>
+                  {datesWithData.map((dk) => {
+                    const val = lookup[item]?.[dk];
+                    return (
+                      <Fragment key={dk}>
+                        {showBalance && (
+                          <td className="text-center px-1 py-1.5 font-mono text-xs border-r border-border">
+                            {val && val.balance > 0 ? val.balance : "—"}
+                          </td>
+                        )}
+                        {showOrder && (
+                          <td className="text-center px-1 py-1.5 font-mono text-xs border-r border-border">
+                            {val && val.order > 0 ? val.order : "—"}
+                          </td>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </tr>
               ))}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
       )}
     </div>
@@ -307,7 +421,6 @@ export default function AdminReportsTab() {
         setRestaurants(names);
       })
       .catch(() => {
-        // fallback: derive from records
         if (records) {
           const unique = [
             ...new Set(records.map((r) => r.restaurantName)),
@@ -334,7 +447,8 @@ export default function AdminReportsTab() {
       <div>
         <h3 className="text-lg font-semibold">Reports</h3>
         <p className="text-sm text-muted-foreground">
-          Select a restaurant, choose a date range, and tap Search.
+          Date-wise pivot table: rows = items, columns = dates. Select a
+          restaurant and date range, then tap Search.
         </p>
       </div>
 

@@ -49,8 +49,10 @@ import {
   getOrderDateFromBalanceDate,
 } from "../utils/dateFormat";
 import {
+  type RestaurantAssignment,
   getMasterCategories,
   getRawMaterialsByCategory,
+  getRestaurantAssignment,
 } from "../utils/masterData";
 
 interface CartItem {
@@ -89,6 +91,9 @@ export default function DailyEntryForm({
 
   const [categories, setCategories] = useState<string[]>(
     CATEGORIES.filter((c) => categoryFilter.includes(c)),
+  );
+  const [assignment, setAssignment] = useState<RestaurantAssignment | null>(
+    null,
   );
 
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -142,24 +147,42 @@ export default function DailyEntryForm({
   }, []);
 
   useEffect(() => {
-    getMasterCategories()
-      .then((cats) => {
+    Promise.all([
+      getMasterCategories(),
+      session?.restaurantName
+        ? getRestaurantAssignment(session.restaurantName)
+        : Promise.resolve(null),
+    ])
+      .then(([cats, asgn]) => {
+        setAssignment(asgn);
         if (cats && cats.length > 0) {
-          const filtered = cats
+          let names = cats
             .map((c) => c.name)
             .filter((name) => categoryFilter.includes(name));
-          if (filtered.length > 0) setCategories(filtered);
+          // Filter by assignment if it has allowedCategories
+          if (asgn && asgn.allowedCategories.length > 0) {
+            names = names.filter((n) => asgn.allowedCategories.includes(n));
+          }
+          if (names.length > 0) setCategories(names);
         }
       })
       .catch(() => {});
-  }, [categoryFilter]);
+  }, [categoryFilter, session?.restaurantName]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: assignment is loaded separately
   useEffect(() => {
     if (selectedCategory) {
       getRawMaterialsByCategory(selectedCategory)
         .then((items) => {
           if (items && items.length > 0) {
-            setIngredientOptions(items);
+            // Filter by assignment allowedItems if applicable
+            const filtered =
+              assignment && assignment.allowedItems.length > 0
+                ? items.filter((item) =>
+                    assignment.allowedItems.includes(item.name),
+                  )
+                : items;
+            setIngredientOptions(filtered.length > 0 ? filtered : items);
           } else {
             const fallback = PREDEFINED_INGREDIENTS.filter(
               (ing) => ing.category === selectedCategory,

@@ -16,6 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -50,6 +51,7 @@ import {
   LogOut,
   Pencil,
   Plus,
+  Settings,
   ShieldAlert,
   ShieldCheck,
   Trash2,
@@ -61,6 +63,7 @@ import {
   type MasterCategory,
   type RawMaterial,
   type Restaurant,
+  type RestaurantAssignment,
   type RestaurantUser,
   addCategory,
   addRawMaterial,
@@ -72,10 +75,12 @@ import {
   deleteUser,
   getMasterCategories,
   getRawMaterials,
+  getRestaurantAssignment,
   getRestaurants,
   getUsers,
   initMasterData,
   setAdminPassword,
+  setRestaurantAssignment,
   updateCategory,
   updateRawMaterial,
   updateRestaurant,
@@ -95,6 +100,18 @@ function RestaurantMasterTab() {
   const [editingRest, setEditingRest] = useState<Restaurant | null>(null);
   const [restName, setRestName] = useState("");
   const [deleteRestId, setDeleteRestId] = useState<string | null>(null);
+
+  // Assignment dialog state
+  const [assignRestaurant, setAssignRestaurant] = useState<Restaurant | null>(
+    null,
+  );
+  const [assignCategories, setAssignCategories] = useState<MasterCategory[]>(
+    [],
+  );
+  const [assignMaterials, setAssignMaterials] = useState<RawMaterial[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [assignLoading, setAssignLoading] = useState(false);
 
   const [showUserDialog, setShowUserDialog] = useState(false);
   const [editingUser, setEditingUser] = useState<RestaurantUser | null>(null);
@@ -126,6 +143,49 @@ function RestaurantMasterTab() {
     setEditingRest(r);
     setRestName(r.name);
     setShowRestDialog(true);
+  };
+
+  const openAssign = async (r: Restaurant) => {
+    setAssignRestaurant(r);
+    setAssignLoading(true);
+    try {
+      const [cats, mats, existing] = await Promise.all([
+        getMasterCategories(),
+        getRawMaterials(),
+        getRestaurantAssignment(r.name),
+      ]);
+      setAssignCategories(cats);
+      setAssignMaterials(mats);
+      if (existing && existing.allowedCategories.length > 0) {
+        setSelectedCategories(existing.allowedCategories);
+      } else {
+        setSelectedCategories(cats.map((c) => c.name));
+      }
+      if (existing && existing.allowedItems.length > 0) {
+        setSelectedItems(existing.allowedItems);
+      } else {
+        setSelectedItems(mats.map((m) => m.name));
+      }
+    } catch {
+      toast.error("Failed to load assignment data.");
+    } finally {
+      setAssignLoading(false);
+    }
+  };
+
+  const saveAssignment = async () => {
+    if (!assignRestaurant) return;
+    try {
+      await setRestaurantAssignment(
+        assignRestaurant.name,
+        selectedCategories,
+        selectedItems,
+      );
+      toast.success("Assignment saved.");
+      setAssignRestaurant(null);
+    } catch {
+      toast.error("Failed to save assignment.");
+    }
   };
   const saveRest = async () => {
     if (!restName.trim()) return;
@@ -261,6 +321,15 @@ function RestaurantMasterTab() {
                       data-ocid={`admin.restaurant.edit_button.${idx + 1}`}
                     >
                       <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openAssign(r)}
+                      data-ocid={`admin.restaurant.open_modal_button.${idx + 1}`}
+                      title="Assign Categories & Items"
+                    >
+                      <Settings className="w-3.5 h-3.5" />
                     </Button>
                     <Button
                       variant="destructive"
@@ -504,6 +573,126 @@ function RestaurantMasterTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Assignment Dialog */}
+      <Dialog
+        open={!!assignRestaurant}
+        onOpenChange={(o) => !o && setAssignRestaurant(null)}
+      >
+        <DialogContent className="max-w-lg" data-ocid="admin.assign.dialog">
+          <DialogHeader>
+            <DialogTitle>
+              Assign Categories &amp; Items &mdash; {assignRestaurant?.name}
+            </DialogTitle>
+          </DialogHeader>
+          {assignLoading ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              Loading assignment data...
+            </div>
+          ) : (
+            <div className="max-h-[60vh] overflow-y-auto space-y-5 py-2 pr-1">
+              {/* Categories */}
+              <div>
+                <p className="text-sm font-semibold mb-2">Categories</p>
+                <div className="space-y-2">
+                  {assignCategories.map((cat) => (
+                    <div key={cat.id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`ac-${cat.id}`}
+                        checked={selectedCategories.includes(cat.name)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedCategories((prev) => [
+                              ...prev,
+                              cat.name,
+                            ]);
+                          } else {
+                            setSelectedCategories((prev) =>
+                              prev.filter((n) => n !== cat.name),
+                            );
+                          }
+                        }}
+                        data-ocid="admin.assign.checkbox"
+                      />
+                      <label
+                        htmlFor={`ac-${cat.id}`}
+                        className="text-sm cursor-pointer"
+                      >
+                        {cat.name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Raw Materials grouped by category */}
+              <div>
+                <p className="text-sm font-semibold mb-2">Raw Materials</p>
+                {assignCategories.map((cat) => {
+                  const items = assignMaterials.filter(
+                    (m) => m.category === cat.name,
+                  );
+                  if (items.length === 0) return null;
+                  return (
+                    <div key={cat.id} className="mb-3">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                        {cat.name}
+                      </p>
+                      <div className="space-y-1 pl-2">
+                        {items.map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex items-center gap-2"
+                          >
+                            <Checkbox
+                              id={`ai-${item.id}`}
+                              checked={selectedItems.includes(item.name)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedItems((prev) => [
+                                    ...prev,
+                                    item.name,
+                                  ]);
+                                } else {
+                                  setSelectedItems((prev) =>
+                                    prev.filter((n) => n !== item.name),
+                                  );
+                                }
+                              }}
+                              data-ocid="admin.assign.checkbox"
+                            />
+                            <label
+                              htmlFor={`ai-${item.id}`}
+                              className="text-xs cursor-pointer"
+                            >
+                              {item.name}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAssignRestaurant(null)}
+              data-ocid="admin.assign.cancel_button"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={saveAssignment}
+              data-ocid="admin.assign.save_button"
+            >
+              Save Assignment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -22,6 +22,12 @@ export interface RawMaterial {
   category: string;
 }
 
+export interface RestaurantAssignment {
+  restaurantName: string;
+  allowedCategories: string[];
+  allowedItems: string[];
+}
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // --- Init ---
@@ -194,4 +200,32 @@ export async function updateRawMaterial(
 export async function deleteRawMaterial(id: string): Promise<void> {
   const actor = await getAnonActor();
   await actor.deleteRawMaterial(id);
+}
+
+// --- Restaurant Assignments ---
+export async function getRestaurantAssignment(
+  restaurantName: string,
+): Promise<RestaurantAssignment | null> {
+  const actor = await getAnonActor();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const actorAny = actor as any;
+  const result = await actorAny.getRestaurantAssignment(restaurantName);
+  return result && result.length > 0
+    ? (result[0] as RestaurantAssignment)
+    : null;
+}
+
+export async function setRestaurantAssignment(
+  restaurantName: string,
+  allowedCategories: string[],
+  allowedItems: string[],
+): Promise<void> {
+  const actor = await getAnonActor();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const actorAny = actor as any;
+  await actorAny.setRestaurantAssignment(
+    restaurantName,
+    allowedCategories,
+    allowedItems,
+  );
 }

@@ -41,6 +41,12 @@ actor {
 
   type RawMaterial = { id : Text; name : Text; category : Text };
 
+  type RestaurantAssignment = {
+    restaurantName   : Text;
+    allowedCategories : [Text];
+    allowedItems     : [Text];
+  };
+
   // ─── OLD Stable Vars (kept verbatim for upgrade compatibility) ────────────
   stable var nextDailyRecordId : Nat = 0;
   let users = Map.empty<Principal, [DailyRecord]>();
@@ -63,6 +69,7 @@ actor {
   stable var seeded           : Bool              = false;
   stable var seededV2         : Bool              = false;
   stable var nextId           : Nat               = 1000;
+  stable var restaurantAssignments : [RestaurantAssignment] = [];
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -201,7 +208,6 @@ actor {
     if (not seededV2) {
       seededV2 := true;
 
-      // Add Dry Store category if not present
       let hasDryStore = Array.find(masterCategories, func(c : MasterCategory) : Bool { c.name == "Dry Store" });
       switch (hasDryStore) {
         case null {
@@ -210,7 +216,6 @@ actor {
         case _ {};
       };
 
-      // Add Housekeeping category if not present
       let hasHousekeeping = Array.find(masterCategories, func(c : MasterCategory) : Bool { c.name == "Housekeeping" });
       switch (hasHousekeeping) {
         case null {
@@ -219,7 +224,6 @@ actor {
         case _ {};
       };
 
-      // Add Dry Store raw materials if not present
       let hasDryStoreItems = Array.find(rawMaterials, func(m : RawMaterial) : Bool { m.category == "Dry Store" });
       switch (hasDryStoreItems) {
         case null {
@@ -298,7 +302,6 @@ actor {
         case _ {};
       };
 
-      // Add Housekeeping raw materials if not present
       let hasHousekeepingItems = Array.find(rawMaterials, func(m : RawMaterial) : Bool { m.category == "Housekeeping" });
       switch (hasHousekeepingItems) {
         case null {
@@ -432,6 +435,35 @@ actor {
 
   public func deleteRawMaterial(id : Text) : async () {
     rawMaterials := Array.filter(rawMaterials, func(m : RawMaterial) : Bool { m.id != id });
+  };
+
+  // ─── Restaurant Assignments ───────────────────────────────────────────────
+
+  public query func getRestaurantAssignment(restaurantName : Text) : async ?RestaurantAssignment {
+    Array.find(restaurantAssignments, func(a : RestaurantAssignment) : Bool {
+      a.restaurantName == restaurantName;
+    });
+  };
+
+  public func setRestaurantAssignment(
+    restaurantName    : Text,
+    allowedCategories : [Text],
+    allowedItems      : [Text],
+  ) : async () {
+    let exists = Array.find(restaurantAssignments, func(a : RestaurantAssignment) : Bool {
+      a.restaurantName == restaurantName;
+    });
+    let newEntry : RestaurantAssignment = { restaurantName; allowedCategories; allowedItems };
+    switch (exists) {
+      case null {
+        restaurantAssignments := Array.append(restaurantAssignments, [newEntry]);
+      };
+      case _ {
+        restaurantAssignments := Array.map(restaurantAssignments, func(a : RestaurantAssignment) : RestaurantAssignment {
+          if (a.restaurantName == restaurantName) newEntry else a;
+        });
+      };
+    };
   };
 
   // ─── Admin Password ───────────────────────────────────────────────────────

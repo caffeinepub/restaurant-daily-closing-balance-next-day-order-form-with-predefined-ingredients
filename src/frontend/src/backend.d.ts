@@ -7,6 +7,7 @@ export interface Restaurant { id: string; name: string; }
 export interface RestaurantUser { username: string; password: string; restaurantName: string; }
 export interface Category { id: string; name: string; }
 export interface RawMaterial { id: string; name: string; category: string; }
+export interface RestaurantAssignment { restaurantName: string; allowedCategories: string[]; allowedItems: string[]; }
 
 export interface BackendActor {
   // Seed
@@ -37,6 +38,9 @@ export interface BackendActor {
   addRawMaterial: (name: string, category: string) => Promise<void>;
   updateRawMaterial: (id: string, name: string, category: string) => Promise<void>;
   deleteRawMaterial: (id: string) => Promise<void>;
+  // Restaurant Assignments
+  getRestaurantAssignment: (restaurantName: string) => Promise<[RestaurantAssignment] | []>;
+  setRestaurantAssignment: (restaurantName: string, allowedCategories: string[], allowedItems: string[]) => Promise<void>;
   // Admin password
   verifyAdminPassword: (password: string) => Promise<boolean>;
   setAdminPassword: (newPassword: string) => Promise<void>;

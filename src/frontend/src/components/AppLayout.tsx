@@ -1,11 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { APP_VERSION } from "@/config/appVersion";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { ChevronDown, LogOut } from "lucide-react";
+import { ChevronDown, Home, LogOut } from "lucide-react";
 import { useRef, useState } from "react";
 import { SiCoffeescript } from "react-icons/si";
 import { useRestaurantSession } from "../hooks/useRestaurantSession";
-import BottomNavBar from "./BottomNavBar";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -35,7 +34,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const isMultiRestaurant =
     session?.availableRestaurants && session.availableRestaurants.length > 1;
 
-  const showBottomNav = !!session;
+  // Show home button bar on all authenticated non-home pages
+  const showHomeBar = !!session;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -193,12 +193,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
       <main
         className="flex-1 container mx-auto px-3 py-4"
-        style={{ paddingBottom: showBottomNav ? 76 : 24 }}
+        style={{ paddingBottom: showHomeBar ? 72 : 24 }}
       >
         {children}
       </main>
 
-      {!showBottomNav && (
+      {!showHomeBar && (
         <footer className="border-t border-border bg-card mt-auto">
           <div className="container mx-auto px-4 py-4">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
@@ -226,7 +226,45 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </footer>
       )}
 
-      {showBottomNav && <BottomNavBar />}
+      {/* Home button bar — shown on all authenticated non-home pages */}
+      {showHomeBar && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 50,
+            background: "white",
+            borderTop: "1.5px solid #E07820",
+            display: "flex",
+            justifyContent: "center",
+            padding: "8px 16px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => navigate({ to: "/" })}
+            style={{
+              background: "#E07820",
+              color: "white",
+              borderRadius: 8,
+              padding: "8px 32px",
+              fontWeight: 700,
+              fontSize: 15,
+              border: "none",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+            data-ocid="layout.home.button"
+          >
+            <Home style={{ width: 18, height: 18 }} />
+            Home
+          </button>
+        </div>
+      )}
     </div>
   );
 }
