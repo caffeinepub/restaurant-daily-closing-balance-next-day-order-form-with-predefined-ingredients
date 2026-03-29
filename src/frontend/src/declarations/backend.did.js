@@ -66,6 +66,12 @@ export const idlFactory = ({ IDL }) => {
     'restaurantName' : IDL.Text,
   });
 
+  const RestaurantAssignment = IDL.Record({
+    'restaurantName' : IDL.Text,
+    'allowedCategories' : IDL.Vec(IDL.Text),
+    'allowedItems' : IDL.Vec(IDL.Text),
+  });
+
   return IDL.Service({
     // Seed
     'seedDefaultData' : IDL.Func([], [], []),
@@ -98,6 +104,9 @@ export const idlFactory = ({ IDL }) => {
     // Admin password
     'verifyAdminPassword' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
     'setAdminPassword' : IDL.Func([IDL.Text], [], []),
+    // Restaurant Assignments
+    'getRestaurantAssignment' : IDL.Func([IDL.Text], [IDL.Opt(RestaurantAssignment)], ['query']),
+    'setRestaurantAssignment' : IDL.Func([IDL.Text, IDL.Vec(IDL.Text), IDL.Vec(IDL.Text)], [], []),
     // Legacy
     'getAllCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
     'getIngredientsByCategory' : IDL.Func([CategoryName], [IDL.Vec(Ingredient)], ['query']),

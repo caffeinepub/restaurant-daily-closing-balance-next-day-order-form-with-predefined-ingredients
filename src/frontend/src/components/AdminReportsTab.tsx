@@ -180,6 +180,7 @@ function ReportPanel({
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [restaurant, setRestaurant] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("__all__");
   const [hasSearched, setHasSearched] = useState(false);
   const [filteredRecords, setFilteredRecords] = useState<SavedDailyRecord[]>(
     [],
@@ -219,6 +220,12 @@ function ReportPanel({
   // Group all raw materials by category
   const categoryGroups = groupRawMaterialsByCategory(allRawMaterials);
 
+  // Filter category groups based on selected category
+  const visibleCategoryGroups =
+    selectedCategory === "__all__"
+      ? categoryGroups
+      : categoryGroups.filter((g) => g.category === selectedCategory);
+
   // Build lookup: itemName -> dateKey -> {balance, order}
   const lookup: Record<
     string,
@@ -245,7 +252,7 @@ function ReportPanel({
 
   const subColCount = showBalance && showOrder ? 2 : 1;
   const totalDataCols = datesWithData.length * subColCount;
-  const totalItemCount = categoryGroups.reduce(
+  const totalItemCount = visibleCategoryGroups.reduce(
     (sum, g) => sum + g.items.length,
     0,
   );
@@ -295,6 +302,22 @@ function ReportPanel({
             className="w-40"
           />
         </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs font-semibold">Category</Label>
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-44" data-ocid="reports.category.select">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All Categories</SelectItem>
+              {categoryGroups.map((g) => (
+                <SelectItem key={g.category} value={g.category}>
+                  {g.category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <Button
           onClick={handleSearch}
           className="gap-2 bg-gray-900 hover:bg-gray-800 text-white font-bold"
@@ -312,7 +335,7 @@ function ReportPanel({
                 filteredRecords,
                 reportType,
                 datesWithData,
-                categoryGroups,
+                visibleCategoryGroups,
               )
             }
             data-ocid="reports.export_button"
@@ -348,6 +371,13 @@ function ReportPanel({
             {totalItemCount} item{totalItemCount !== 1 ? "s" : ""} across{" "}
             {datesWithData.length} date{datesWithData.length !== 1 ? "s" : ""}{" "}
             for <span className="font-semibold">{restaurant}</span>
+            {selectedCategory !== "__all__" && (
+              <span>
+                {" "}
+                — category:{" "}
+                <span className="font-semibold">{selectedCategory}</span>
+              </span>
+            )}
           </p>
           <table
             className="w-full text-sm border-collapse"
@@ -405,7 +435,7 @@ function ReportPanel({
               </tr>
             </thead>
             <tbody>
-              {categoryGroups.map((group) => (
+              {visibleCategoryGroups.map((group) => (
                 <Fragment key={group.category}>
                   {/* Category header row */}
                   <tr className="bg-orange-50 border-t-2 border-orange-200">

@@ -43,6 +43,7 @@ export interface MasterCategory { id: string; name: string; }
 export interface RawMaterial { id: string; name: string; category: string; }
 export interface Category { name: string; }
 export interface UserProfile { name: string; restaurantName: string; }
+export interface RestaurantAssignment { restaurantName: string; allowedCategories: string[]; allowedItems: string[]; }
 
 export interface backendInterface {
     _initializeAccessControlWithSecret(secret: string): Promise<void>;
@@ -72,6 +73,8 @@ export interface backendInterface {
     setAdminPassword(newPassword: string): Promise<void>;
     getAllCategories(): Promise<Array<Category>>;
     getIngredientsByCategory(category: string): Promise<Array<Ingredient>>;
+    getRestaurantAssignment(restaurantName: string): Promise<[RestaurantAssignment] | []>;
+    setRestaurantAssignment(restaurantName: string, allowedCategories: string[], allowedItems: string[]): Promise<void>;
 }
 
 export class Backend implements backendInterface {
@@ -129,6 +132,12 @@ export class Backend implements backendInterface {
     setAdminPassword(newPassword: string): Promise<void> { return this.call(() => this.actor.setAdminPassword(newPassword)); }
     getAllCategories(): Promise<Array<Category>> { return this.call(() => this.actor.getAllCategories()); }
     _initializeAccessControlWithSecret(_secret: string): Promise<void> { return Promise.resolve(); }
+    getRestaurantAssignment(restaurantName: string): Promise<[RestaurantAssignment] | []> {
+        return this.call(() => (this.actor as any).getRestaurantAssignment(restaurantName));
+    }
+    setRestaurantAssignment(restaurantName: string, allowedCategories: string[], allowedItems: string[]): Promise<void> {
+        return this.call(() => (this.actor as any).setRestaurantAssignment(restaurantName, allowedCategories, allowedItems));
+    }
     getIngredientsByCategory(category: string): Promise<Array<Ingredient>> {
         return this.call(() => this.actor.getIngredientsByCategory(category));
     }
