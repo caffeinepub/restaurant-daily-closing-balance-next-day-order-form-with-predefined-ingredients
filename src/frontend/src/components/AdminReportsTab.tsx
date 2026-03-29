@@ -14,7 +14,8 @@ import { Fragment, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useGetAllDailyRecords } from "../hooks/useQueries";
 import type { SavedDailyRecord } from "../types/dailyForm";
-import { getRestaurants } from "../utils/masterData";
+import { getRawMaterials, getRestaurants } from "../utils/masterData";
+import type { RawMaterial } from "../utils/masterData";
 
 function getLocalDateString(ts: bigint): string {
   const ms = Number(ts);
@@ -61,11 +62,29 @@ function filterByDateAndRestaurant(
   });
 }
 
+interface CategoryGroup {
+  category: string;
+  items: string[];
+}
+
+function groupRawMaterialsByCategory(
+  materials: RawMaterial[],
+): CategoryGroup[] {
+  const map: Record<string, string[]> = {};
+  for (const m of materials) {
+    if (!map[m.category]) map[m.category] = [];
+    map[m.category].push(m.name);
+  }
+  return Object.entries(map)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([category, items]) => ({ category, items: items.sort() }));
+}
+
 function exportPivotCSV(
   records: SavedDailyRecord[],
   reportType: string,
   dates: string[],
-  itemNames: string[],
+  categoryGroups: CategoryGroup[],
 ) {
   const showBalance = reportType === "balance" || reportType === "both";
   const showOrder = reportType === "order" || reportType === "both";
@@ -105,20 +124,34 @@ function exportPivotCSV(
   }
 
   const rows: string[][] = [headerRow1, headerRow2];
-  for (const item of itemNames) {
-    const row = [item];
-    for (const dk of dates) {
-      const val = lookup[item]?.[dk];
-      if (showBalance && showOrder) {
-        row.push(val ? String(val.balance) : "—");
-        row.push(val ? String(val.order) : "—");
-      } else if (showBalance) {
-        row.push(val ? String(val.balance) : "—");
-      } else {
-        row.push(val ? String(val.order) : "—");
-      }
+
+  for (const group of categoryGroups) {
+    // Category header row
+    const catRow = [`[${group.category}]`];
+    for (
+      let i = 0;
+      i < dates.length * (showBalance && showOrder ? 2 : 1);
+      i++
+    ) {
+      catRow.push("");
     }
-    rows.push(row);
+    rows.push(catRow);
+
+    for (const item of group.items) {
+      const row = [item];
+      for (const dk of dates) {
+        const val = lookup[item]?.[dk];
+        if (showBalance && showOrder) {
+          row.push(val ? String(val.balance) : "—");
+          row.push(val ? String(val.order) : "—");
+        } else if (showBalance) {
+          row.push(val ? String(val.balance) : "—");
+        } else {
+          row.push(val ? String(val.order) : "—");
+        }
+      }
+      rows.push(row);
+    }
   }
 
   const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
@@ -135,9 +168,15 @@ interface ReportPanelProps {
   reportType: "order" | "balance" | "both";
   records: SavedDailyRecord[] | undefined;
   restaurants: string[];
+  allRawMaterials: RawMaterial[];
 }
 
-function ReportPanel({ reportType, records, restaurants }: ReportPanelProps) {
+function ReportPanel({
+  reportType,
+  records,
+  restaurants,
+  allRawMaterials,
+}: ReportPanelProps) {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [restaurant, setRestaurant] = useState("");
@@ -177,10 +216,8 @@ function ReportPanel({ reportType, records, restaurants }: ReportPanelProps) {
     filteredRecords.some((r) => getLocalDateString(r.timestamp) === dk),
   );
 
-  // Collect all unique item names
-  const itemNames = Array.from(
-    new Set(filteredRecords.flatMap((r) => r.entries.map((e) => e.name))),
-  ).sort();
+  // Group all raw materials by category
+  const categoryGroups = groupRawMaterialsByCategory(allRawMaterials);
 
   // Build lookup: itemName -> dateKey -> {balance, order}
   const lookup: Record<
@@ -208,6 +245,10 @@ function ReportPanel({ reportType, records, restaurants }: ReportPanelProps) {
 
   const subColCount = showBalance && showOrder ? 2 : 1;
   const totalDataCols = datesWithData.length * subColCount;
+  const totalItemCount = categoryGroups.reduce(
+    (sum, g) => sum + g.items.length,
+    0,
+  );
 
   return (
     <div className="space-y-4">
@@ -271,7 +312,7 @@ function ReportPanel({ reportType, records, restaurants }: ReportPanelProps) {
                 filteredRecords,
                 reportType,
                 datesWithData,
-                itemNames,
+                categoryGroups,
               )
             }
             data-ocid="reports.export_button"
@@ -293,7 +334,7 @@ function ReportPanel({ reportType, records, restaurants }: ReportPanelProps) {
             Choose a restaurant, set a date range, and tap Search.
           </p>
         </div>
-      ) : itemNames.length === 0 ? (
+      ) : filteredRecords.length === 0 ? (
         <div className="text-center py-14">
           <CalendarSearch className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-base font-semibold">No records found</p>
@@ -304,7 +345,7 @@ function ReportPanel({ reportType, records, restaurants }: ReportPanelProps) {
       ) : (
         <div className="overflow-x-auto rounded-lg border">
           <p className="text-xs text-muted-foreground px-3 pt-2 pb-1">
-            {itemNames.length} item{itemNames.length !== 1 ? "s" : ""} across{" "}
+            {totalItemCount} item{totalItemCount !== 1 ? "s" : ""} across{" "}
             {datesWithData.length} date{datesWithData.length !== 1 ? "s" : ""}{" "}
             for <span className="font-semibold">{restaurant}</span>
           </p>
@@ -364,41 +405,72 @@ function ReportPanel({ reportType, records, restaurants }: ReportPanelProps) {
               </tr>
             </thead>
             <tbody>
-              {itemNames.map((item, idx) => (
-                <tr
-                  key={item}
-                  className={idx % 2 === 0 ? "bg-white" : "bg-muted/20"}
-                >
-                  <td
-                    className="px-3 py-1.5 font-medium border-r border-border text-xs"
-                    style={{
-                      position: "sticky",
-                      left: 0,
-                      background: idx % 2 === 0 ? "white" : "#f9f9f9",
-                      zIndex: 1,
-                      minWidth: 160,
-                    }}
-                  >
-                    {item}
-                  </td>
-                  {datesWithData.map((dk) => {
-                    const val = lookup[item]?.[dk];
-                    return (
+              {categoryGroups.map((group) => (
+                <Fragment key={group.category}>
+                  {/* Category header row */}
+                  <tr className="bg-orange-50 border-t-2 border-orange-200">
+                    <td
+                      className="px-3 py-1.5 font-bold text-xs text-orange-800 border-r border-border uppercase tracking-wide"
+                      style={{
+                        position: "sticky",
+                        left: 0,
+                        background: "#fff7ed",
+                        zIndex: 1,
+                        minWidth: 160,
+                      }}
+                      colSpan={1}
+                    >
+                      {group.category}
+                    </td>
+                    {datesWithData.map((dk) => (
                       <Fragment key={dk}>
                         {showBalance && (
-                          <td className="text-center px-1 py-1.5 font-mono text-xs border-r border-border">
-                            {val && val.balance > 0 ? val.balance : "—"}
-                          </td>
+                          <td className="border-r border-border bg-orange-50" />
                         )}
                         {showOrder && (
-                          <td className="text-center px-1 py-1.5 font-mono text-xs border-r border-border">
-                            {val && val.order > 0 ? val.order : "—"}
-                          </td>
+                          <td className="border-r border-border bg-orange-50" />
                         )}
                       </Fragment>
-                    );
-                  })}
-                </tr>
+                    ))}
+                  </tr>
+                  {/* Item rows */}
+                  {group.items.map((item, idx) => (
+                    <tr
+                      key={item}
+                      className={idx % 2 === 0 ? "bg-white" : "bg-muted/20"}
+                    >
+                      <td
+                        className="px-3 py-1.5 font-medium border-r border-border text-xs pl-5"
+                        style={{
+                          position: "sticky",
+                          left: 0,
+                          background: idx % 2 === 0 ? "white" : "#f9f9f9",
+                          zIndex: 1,
+                          minWidth: 160,
+                        }}
+                      >
+                        {item}
+                      </td>
+                      {datesWithData.map((dk) => {
+                        const val = lookup[item]?.[dk];
+                        return (
+                          <Fragment key={dk}>
+                            {showBalance && (
+                              <td className="text-center px-1 py-1.5 font-mono text-xs border-r border-border">
+                                {val && val.balance > 0 ? val.balance : "—"}
+                              </td>
+                            )}
+                            {showOrder && (
+                              <td className="text-center px-1 py-1.5 font-mono text-xs border-r border-border">
+                                {val && val.order > 0 ? val.order : "—"}
+                              </td>
+                            )}
+                          </Fragment>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -412,13 +484,17 @@ export default function AdminReportsTab() {
   const { data: records, isLoading } = useGetAllDailyRecords();
   const [restaurants, setRestaurants] = useState<string[]>([]);
   const [loadingRestaurants, setLoadingRestaurants] = useState(true);
+  const [allRawMaterials, setAllRawMaterials] = useState<RawMaterial[]>([]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: run once on mount
   useEffect(() => {
-    getRestaurants()
-      .then((rests) => {
-        const names = rests.map((r) => r.name).sort();
+    Promise.all([
+      getRestaurants().then((rests) => rests.map((r) => r.name).sort()),
+      getRawMaterials(),
+    ])
+      .then(([names, materials]) => {
         setRestaurants(names);
+        setAllRawMaterials(materials);
       })
       .catch(() => {
         if (records) {
@@ -447,8 +523,8 @@ export default function AdminReportsTab() {
       <div>
         <h3 className="text-lg font-semibold">Reports</h3>
         <p className="text-sm text-muted-foreground">
-          Date-wise pivot table: rows = items, columns = dates. Select a
-          restaurant and date range, then tap Search.
+          Date-wise pivot table: rows = items grouped by category, columns =
+          dates. Select a restaurant and date range, then tap Search.
         </p>
       </div>
 
@@ -464,6 +540,7 @@ export default function AdminReportsTab() {
             reportType="order"
             records={records}
             restaurants={restaurants}
+            allRawMaterials={allRawMaterials}
           />
         </TabsContent>
         <TabsContent value="balance">
@@ -471,6 +548,7 @@ export default function AdminReportsTab() {
             reportType="balance"
             records={records}
             restaurants={restaurants}
+            allRawMaterials={allRawMaterials}
           />
         </TabsContent>
         <TabsContent value="both">
@@ -478,6 +556,7 @@ export default function AdminReportsTab() {
             reportType="both"
             records={records}
             restaurants={restaurants}
+            allRawMaterials={allRawMaterials}
           />
         </TabsContent>
       </Tabs>

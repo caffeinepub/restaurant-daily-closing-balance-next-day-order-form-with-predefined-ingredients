@@ -21,6 +21,7 @@ export interface MasterCategory { 'id' : string, 'name' : string }
 export interface RawMaterial { 'id' : string, 'name' : string, 'category' : string }
 export interface Category { 'name' : CategoryName }
 export interface UserProfile { 'name' : string, 'restaurantName' : string }
+export interface RestaurantAssignment { 'restaurantName' : string, 'allowedCategories' : Array<string>, 'allowedItems' : Array<string> }
 
 export interface _SERVICE {
   'seedDefaultData' : ActorMethod<[], undefined>,
@@ -49,6 +50,8 @@ export interface _SERVICE {
   'setAdminPassword' : ActorMethod<[string], undefined>,
   'getAllCategories' : ActorMethod<[], Array<Category>>,
   'getIngredientsByCategory' : ActorMethod<[CategoryName], Array<Ingredient>>,
+  'getRestaurantAssignment' : ActorMethod<[string], [] | [RestaurantAssignment]>,
+  'setRestaurantAssignment' : ActorMethod<[string, Array<string>, Array<string>], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

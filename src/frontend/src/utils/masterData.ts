@@ -208,8 +208,7 @@ export async function getRestaurantAssignment(
 ): Promise<RestaurantAssignment | null> {
   const actor = await getAnonActor();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const actorAny = actor as any;
-  const result = await actorAny.getRestaurantAssignment(restaurantName);
+  const result = await (actor as any).getRestaurantAssignment(restaurantName);
   return result && result.length > 0
     ? (result[0] as RestaurantAssignment)
     : null;
@@ -222,8 +221,7 @@ export async function setRestaurantAssignment(
 ): Promise<void> {
   const actor = await getAnonActor();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const actorAny = actor as any;
-  await actorAny.setRestaurantAssignment(
+  await (actor as any).setRestaurantAssignment(
     restaurantName,
     allowedCategories,
     allowedItems,
