@@ -25,6 +25,7 @@ import { useGetAllDailyRecords } from "../hooks/useQueries";
 import type { ConcernRecord, ConcernStatus } from "../types/dailyForm";
 import { formatDateDDMMYYYY } from "../utils/dateFormat";
 import { exportConcernTableAsImage } from "../utils/exportTableAsImage";
+import { isWithin24Hours, toMilliseconds } from "../utils/timestampUtils";
 
 export default function RaisedConcernPage() {
   const { recordId } = useParams({ from: "/history/$recordId/concern" });
@@ -64,9 +65,8 @@ export default function RaisedConcernPage() {
     }
   }, [record, recordId]);
 
-  const isWithin24h = record
-    ? Date.now() - Number(record.timestamp) < 24 * 60 * 60 * 1000
-    : false;
+  // Use the safe isWithin24Hours helper — handles both ms and ns timestamps
+  const isWithin24h = record ? isWithin24Hours(record.timestamp) : false;
 
   const allStatusSelected =
     statuses.length > 0 && statuses.every((s) => s !== "");
@@ -84,7 +84,7 @@ export default function RaisedConcernPage() {
     const concernRecord: ConcernRecord = {
       recordIndex: record.recordIndex,
       restaurantName: record.restaurantName,
-      timestamp: Number(record.timestamp),
+      timestamp: toMilliseconds(record.timestamp),
       itemStatuses: orderItems.map((item, idx) => ({
         itemName: item.name,
         category: item.category,
@@ -101,12 +101,12 @@ export default function RaisedConcernPage() {
   const handleExportImage = () => {
     if (!record) return;
     const cats = [...new Set(record.entries.map((e) => e.category))];
+    // Order date = record save date + 1 day (using safe ms conversion)
+    const recordMs = toMilliseconds(record.timestamp);
     exportConcernTableAsImage({
       orderNo: record.orderNo,
       restaurantName: record.restaurantName,
-      orderDate: formatDateDDMMYYYY(
-        BigInt(Number(record.timestamp) + 86400000),
-      ),
+      orderDate: formatDateDDMMYYYY(BigInt(recordMs + 86400000)),
       categories: cats,
       totalIngredients: orderItems.length,
       items: orderItems.map((item, idx) => ({
@@ -184,6 +184,7 @@ export default function RaisedConcernPage() {
   }
 
   const cats = [...new Set(record.entries.map((e) => e.category))];
+  const recordMs = toMilliseconds(record.timestamp);
 
   return (
     <div className="max-w-3xl mx-auto space-y-4" data-ocid="concern.page">
@@ -230,9 +231,7 @@ export default function RaisedConcernPage() {
             <div>
               <span className="text-muted-foreground">Order Date: </span>
               <span className="font-semibold">
-                {formatDateDDMMYYYY(
-                  BigInt(Number(record.timestamp) + 86400000),
-                )}
+                {formatDateDDMMYYYY(BigInt(recordMs + 86400000))}
               </span>
             </div>
             <div>

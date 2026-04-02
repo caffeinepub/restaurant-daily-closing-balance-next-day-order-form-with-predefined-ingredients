@@ -41,10 +41,11 @@ import type { SavedDailyRecord } from "../types/dailyForm";
 import { exportRecordToCSV } from "../utils/csvExport";
 import { formatDateDDMMYYYY } from "../utils/dateFormat";
 import { formatRecordAsPlainText } from "../utils/recordPlainText";
+import { isWithin24Hours, toMilliseconds } from "../utils/timestampUtils";
 import BackendConnectionErrorCard from "./BackendConnectionErrorCard";
 
 function getLocalDateString(ts: bigint): string {
-  const ms = Number(ts);
+  const ms = toMilliseconds(ts);
   const d = new Date(ms);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
@@ -64,10 +65,6 @@ function filterRecords(
     }
     return true;
   });
-}
-
-function isWithin24h(record: SavedDailyRecord): boolean {
-  return Date.now() - Number(record.timestamp) < 24 * 60 * 60 * 1000;
 }
 
 interface HistoryContentProps {
@@ -261,6 +258,7 @@ export default function HistoryContent({
                       ...new Set(record.entries.map((e) => e.category)),
                     ];
                     const rowNum = idx + 1;
+                    const within24h = isWithin24Hours(record.timestamp);
                     const concernSaved = !!localStorage.getItem(
                       `concern_${record.recordIndex}`,
                     );
@@ -287,7 +285,7 @@ export default function HistoryContent({
                             <Button
                               size="sm"
                               className={
-                                isWithin24h(record)
+                                within24h
                                   ? "gap-1 bg-red-600 hover:bg-red-700 text-white font-bold"
                                   : "gap-1 bg-gray-500 hover:bg-gray-600 text-white font-bold"
                               }
@@ -356,6 +354,7 @@ export default function HistoryContent({
                   ...new Set(record.entries.map((e) => e.category)),
                 ];
                 const cardNum = idx + 1;
+                const within24h = isWithin24Hours(record.timestamp);
                 const concernSaved = !!localStorage.getItem(
                   `concern_${record.recordIndex}`,
                 );
@@ -385,7 +384,7 @@ export default function HistoryContent({
                       </div>
                       <Button
                         className={
-                          isWithin24h(record)
+                          within24h
                             ? "w-full gap-2 bg-red-600 hover:bg-red-700 text-white font-bold"
                             : "w-full gap-2 bg-gray-500 hover:bg-gray-600 text-white font-bold"
                         }

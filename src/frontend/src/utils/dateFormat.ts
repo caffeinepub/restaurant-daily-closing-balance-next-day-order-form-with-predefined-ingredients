@@ -1,8 +1,12 @@
+import { toMilliseconds } from "./timestampUtils";
+
 /**
- * Formats a bigint timestamp into dd/mm/yyyy format
+ * Formats a bigint timestamp into dd/mm/yyyy format.
+ * Safely handles both ms and ns timestamps.
  */
 export function formatDateDDMMYYYY(timestamp: bigint): string {
-  const date = new Date(Number(timestamp));
+  const ms = toMilliseconds(timestamp);
+  const date = new Date(ms);
   const day = date.getDate().toString().padStart(2, "0");
   const month = (date.getMonth() + 1).toString().padStart(2, "0");
   const year = date.getFullYear();

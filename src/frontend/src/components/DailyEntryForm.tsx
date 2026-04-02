@@ -54,6 +54,7 @@ import {
   getRawMaterialsByCategory,
   getRestaurantAssignment,
 } from "../utils/masterData";
+import { toMilliseconds } from "../utils/timestampUtils";
 
 interface CartItem {
   name: string;
@@ -399,8 +400,10 @@ export default function DailyEntryForm({
       for (const category of categoriesInCart) {
         const conflict = allRecords.find((record) => {
           if (record.restaurantName !== restaurantName) return false;
+          // Use safe ms conversion for conflict date check
+          const recordMs = toMilliseconds(record.timestamp);
           const recordDate = formatInputDateDDMMYYYY(
-            new Date(Number(record.timestamp)).toISOString().split("T")[0],
+            new Date(recordMs).toISOString().split("T")[0],
           );
           if (recordDate !== balanceDateFormatted) return false;
           return record.entries.some((e) => e.category === category);
@@ -423,8 +426,8 @@ export default function DailyEntryForm({
 
     setIsSaving(true);
     try {
-      const selectedDate = new Date(balanceDate);
-      const timestamp = BigInt(selectedDate.getTime());
+      // Store timestamp in milliseconds
+      const timestamp = BigInt(Date.now());
 
       await addRecord.mutateAsync({
         entries,
