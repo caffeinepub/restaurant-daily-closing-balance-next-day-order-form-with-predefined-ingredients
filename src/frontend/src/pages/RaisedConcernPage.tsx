@@ -27,6 +27,14 @@ import { formatDateDDMMYYYY } from "../utils/dateFormat";
 import { exportConcernTableAsImage } from "../utils/exportTableAsImage";
 import { isWithin24Hours, toMilliseconds } from "../utils/timestampUtils";
 
+/** Statuses that cause red strikethrough on the entire row */
+const STRIKETHROUGH_STATUSES: ConcernStatus[] = [
+  "rejected",
+  "spoiled",
+  "expired",
+  "damage",
+];
+
 export default function RaisedConcernPage() {
   const { recordId } = useParams({ from: "/history/$recordId/concern" });
   const { data: records, isLoading, error } = useGetAllDailyRecords();
@@ -41,6 +49,8 @@ export default function RaisedConcernPage() {
   const orderItems = record?.entries.filter((e) => e.nextDayOrder > 0) ?? [];
 
   const [statuses, setStatuses] = useState<ConcernStatus[]>([]);
+  /** Received qty for "Short" rows — keyed by item index */
+  const [receivedQtys, setReceivedQtys] = useState<Record<number, string>>({});
 
   // Load saved concern from localStorage when record becomes available
   useEffect(() => {
@@ -56,7 +66,17 @@ export default function RaisedConcernPage() {
           );
           return (found?.status ?? "") as ConcernStatus;
         });
+        const loadedQtys: Record<number, string> = {};
+        items.forEach((item, idx) => {
+          const found = parsed.itemStatuses.find(
+            (s) => s.itemName === item.name,
+          );
+          if (found?.status === "short" && found.receivedQty !== undefined) {
+            loadedQtys[idx] = String(found.receivedQty);
+          }
+        });
         setStatuses(loadedStatuses);
+        setReceivedQtys(loadedQtys);
       } catch {
         setStatuses(items.map(() => ""));
       }
@@ -65,11 +85,19 @@ export default function RaisedConcernPage() {
     }
   }, [record, recordId]);
 
-  // Use the safe isWithin24Hours helper — handles both ms and ns timestamps
   const isWithin24h = record ? isWithin24Hours(record.timestamp) : false;
 
   const allStatusSelected =
-    statuses.length > 0 && statuses.every((s) => s !== "");
+    statuses.length > 0 &&
+    statuses.every((s, idx) => {
+      if (s === "") return false;
+      // For "short", require a valid received qty
+      if (s === "short") {
+        const v = receivedQtys[idx];
+        return v !== undefined && v !== "" && !Number.isNaN(Number(v));
+      }
+      return true;
+    });
 
   const handleStatusChange = (idx: number, value: ConcernStatus) => {
     setStatuses((prev) => {
@@ -77,6 +105,18 @@ export default function RaisedConcernPage() {
       next[idx] = value;
       return next;
     });
+    // Clear receivedQty when switching away from "short"
+    if (value !== "short") {
+      setReceivedQtys((prev) => {
+        const next = { ...prev };
+        delete next[idx];
+        return next;
+      });
+    }
+  };
+
+  const handleReceivedQtyChange = (idx: number, value: string) => {
+    setReceivedQtys((prev) => ({ ...prev, [idx]: value }));
   };
 
   const handleConfirm = () => {
@@ -85,12 +125,19 @@ export default function RaisedConcernPage() {
       recordIndex: record.recordIndex,
       restaurantName: record.restaurantName,
       timestamp: toMilliseconds(record.timestamp),
-      itemStatuses: orderItems.map((item, idx) => ({
-        itemName: item.name,
-        category: item.category,
-        orderQty: item.nextDayOrder,
-        status: statuses[idx],
-      })),
+      itemStatuses: orderItems.map((item, idx) => {
+        const status = statuses[idx];
+        const base = {
+          itemName: item.name,
+          category: item.category,
+          orderQty: item.nextDayOrder,
+          status,
+        };
+        if (status === "short") {
+          return { ...base, receivedQty: Number(receivedQtys[idx] ?? 0) };
+        }
+        return base;
+      }),
       confirmedAt: Date.now(),
     };
     localStorage.setItem(`concern_${recordId}`, JSON.stringify(concernRecord));
@@ -101,7 +148,6 @@ export default function RaisedConcernPage() {
   const handleExportImage = () => {
     if (!record) return;
     const cats = [...new Set(record.entries.map((e) => e.category))];
-    // Order date = record save date + 1 day (using safe ms conversion)
     const recordMs = toMilliseconds(record.timestamp);
     exportConcernTableAsImage({
       orderNo: record.orderNo,
@@ -114,6 +160,10 @@ export default function RaisedConcernPage() {
         category: item.category,
         orderQty: item.nextDayOrder,
         status: statuses[idx] ?? "",
+        receivedQty:
+          statuses[idx] === "short"
+            ? Number(receivedQtys[idx] ?? item.nextDayOrder)
+            : undefined,
       })),
     });
     toast.success("Image exported!");
@@ -263,7 +313,7 @@ export default function RaisedConcernPage() {
                 <TableHead className="w-10 text-center py-2 text-xs pl-0">
                   Qty
                 </TableHead>
-                <TableHead className="w-28 text-center py-2 text-xs">
+                <TableHead className="w-32 text-center py-2 text-xs">
                   Status
                 </TableHead>
               </TableRow>
@@ -271,27 +321,53 @@ export default function RaisedConcernPage() {
             <TableBody>
               {orderItems.map((item, idx) => {
                 const status = statuses[idx] ?? "";
-                const isRejected = status === "rejected";
+                const isStrikethrough = STRIKETHROUGH_STATUSES.includes(
+                  status as ConcernStatus,
+                );
+                const isShort = status === "short";
                 const rowNum = idx + 1;
                 return (
                   <TableRow
                     key={item.name}
                     data-ocid={`concern.item.${rowNum}`}
                   >
+                    {/* Item Name */}
                     <TableCell
                       className={`pl-1 pr-0 py-1.5 text-xs font-semibold ${
-                        isRejected ? "line-through text-red-500" : ""
+                        isStrikethrough ? "line-through text-red-500" : ""
                       }`}
                     >
                       {item.name}
                     </TableCell>
-                    <TableCell
-                      className={`text-center py-1.5 text-xs pl-0 w-10 ${
-                        isRejected ? "line-through text-red-500" : ""
-                      }`}
-                    >
-                      {item.nextDayOrder}
+
+                    {/* Order Qty — editable input when Short */}
+                    <TableCell className="text-center py-1.5 pl-0 w-10">
+                      {isShort && isWithin24h ? (
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={receivedQtys[idx] ?? ""}
+                          onChange={(e) =>
+                            handleReceivedQtyChange(idx, e.target.value)
+                          }
+                          placeholder={String(item.nextDayOrder)}
+                          className="w-14 text-xs text-center border-2 border-red-500 rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-red-400"
+                          data-ocid={`concern.short_qty.${rowNum}`}
+                        />
+                      ) : (
+                        <span
+                          className={`text-xs ${
+                            isStrikethrough ? "line-through text-red-500" : ""
+                          }`}
+                        >
+                          {status === "short" && receivedQtys[idx]
+                            ? receivedQtys[idx]
+                            : item.nextDayOrder}
+                        </span>
+                      )}
                     </TableCell>
+
+                    {/* Status dropdown / read-only */}
                     <TableCell className="text-center py-1.5 pr-1">
                       {isWithin24h ? (
                         <Select
@@ -301,7 +377,7 @@ export default function RaisedConcernPage() {
                           }
                         >
                           <SelectTrigger
-                            className="w-[88px] mx-auto h-7 text-xs px-1"
+                            className="w-[100px] mx-auto h-7 text-xs px-1"
                             data-ocid={`concern.select.${rowNum}`}
                           >
                             <SelectValue placeholder="Select" />
@@ -313,6 +389,10 @@ export default function RaisedConcernPage() {
                             <SelectItem value="rejected">
                               ❌ Not Received
                             </SelectItem>
+                            <SelectItem value="short">🟧 Short</SelectItem>
+                            <SelectItem value="spoiled">🟥 Spoiled</SelectItem>
+                            <SelectItem value="expired">⏰ Expired</SelectItem>
+                            <SelectItem value="damage">🟨 Damage</SelectItem>
                           </SelectContent>
                         </Select>
                       ) : (
@@ -320,16 +400,28 @@ export default function RaisedConcernPage() {
                           className={`text-xs font-medium ${
                             status === "accepted"
                               ? "text-green-600"
-                              : status === "rejected"
-                                ? "text-red-600"
-                                : "text-muted-foreground"
+                              : status === "short"
+                                ? "text-orange-500"
+                                : STRIKETHROUGH_STATUSES.includes(
+                                      status as ConcernStatus,
+                                    )
+                                  ? "text-red-600"
+                                  : "text-muted-foreground"
                           }`}
                         >
                           {status === "accepted"
                             ? "✅ Received"
                             : status === "rejected"
                               ? "❌ Not Received"
-                              : "—"}
+                              : status === "short"
+                                ? "🟧 Short"
+                                : status === "spoiled"
+                                  ? "🟥 Spoiled"
+                                  : status === "expired"
+                                    ? "⏰ Expired"
+                                    : status === "damage"
+                                      ? "🟨 Damage"
+                                      : "—"}
                         </span>
                       )}
                     </TableCell>
@@ -346,7 +438,14 @@ export default function RaisedConcernPage() {
         <div className="pb-6">
           {!allStatusSelected && (
             <p className="text-xs text-muted-foreground text-center mb-2">
-              Please select a status for every row to enable Confirm.
+              {statuses.some(
+                (s, idx) =>
+                  s === "short" &&
+                  (!receivedQtys[idx] ||
+                    Number.isNaN(Number(receivedQtys[idx]))),
+              )
+                ? 'Please enter a received quantity for all "Short" rows.'
+                : "Please select a status for every row to enable Confirm."}
             </p>
           )}
           <Button

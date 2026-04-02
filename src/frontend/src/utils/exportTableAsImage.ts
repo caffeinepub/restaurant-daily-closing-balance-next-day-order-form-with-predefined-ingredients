@@ -1,5 +1,32 @@
 import type { ConcernStatus } from "../types/dailyForm";
 
+/** Statuses that render with red strikethrough */
+const STRIKETHROUGH_STATUSES: ConcernStatus[] = [
+  "rejected",
+  "spoiled",
+  "expired",
+  "damage",
+];
+
+function getStatusLabel(status: ConcernStatus): string {
+  switch (status) {
+    case "accepted":
+      return "\u2705 Received";
+    case "rejected":
+      return "\u274C Not Received";
+    case "short":
+      return "\uD83D\uDFE7 Short";
+    case "spoiled":
+      return "\uD83D\uDFE5 Spoiled";
+    case "expired":
+      return "\u23F0 Expired";
+    case "damage":
+      return "\uD83D\uDFE8 Damage";
+    default:
+      return "\u2014";
+  }
+}
+
 export function exportConcernTableAsImage(params: {
   orderNo: number;
   restaurantName: string;
@@ -11,6 +38,8 @@ export function exportConcernTableAsImage(params: {
     category: string;
     orderQty: number;
     status: ConcernStatus;
+    /** For Short rows — the received qty entered by user */
+    receivedQty?: number;
   }[];
 }): void {
   const {
@@ -23,17 +52,11 @@ export function exportConcernTableAsImage(params: {
   } = params;
 
   const dpr = window.devicePixelRatio || 1;
-  const colWidths = [175, 55, 110];
+  const colWidths = [170, 55, 115];
   const tableWidth = colWidths.reduce((a, b) => a + b, 0);
   const padding = 16;
   const canvasWidth = tableWidth + padding * 2;
 
-  // Header layout (compact, brand at bottom):
-  // y=22: Order #X · Restaurant (bold 13px)
-  // y=38: Order Date: ... (12px)
-  // y=54: Categories: ... (11px)
-  // y=70: Total Ingredients: X (11px)
-  // y=84: Shri Hoshnagi F&B Opp. (bold 8px)
   const headerH = 96;
   const rowH = 36;
   const tableHeaderH = 34;
@@ -64,7 +87,11 @@ export function exportConcernTableAsImage(params: {
   ctx.fillStyle = "#f3f4f6";
   ctx.font = "bold 13px sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText(`Order #${orderNo}  ·  ${restaurantName}`, canvasWidth / 2, 22);
+  ctx.fillText(
+    `Order #${orderNo}  \u00b7  ${restaurantName}`,
+    canvasWidth / 2,
+    22,
+  );
 
   ctx.font = "12px sans-serif";
   ctx.fillStyle = "#d1d5db";
@@ -73,7 +100,7 @@ export function exportConcernTableAsImage(params: {
   ctx.fillText(`Categories: ${categories.join(", ")}`, canvasWidth / 2, 54);
   ctx.fillText(`Total Ingredients: ${totalIngredients}`, canvasWidth / 2, 70);
 
-  // Brand name at bottom of header — 50% of original 16px = 8px
+  // Brand at bottom of header (small)
   ctx.font = "bold 8px sans-serif";
   ctx.fillStyle = "#9ca3af";
   ctx.fillText("Shri Hoshnagi F&B Opp.", canvasWidth / 2, 84);
@@ -81,7 +108,7 @@ export function exportConcernTableAsImage(params: {
   // Table header
   const tableStartY = headerH + padding;
   const tableX = padding;
-  const colHeaders = ["Item Name", "Order Qty", "Status"];
+  const colHeaders = ["Item Name", "Qty", "Status"];
 
   ctx.fillStyle = "#1f2937";
   ctx.fillRect(tableX, tableStartY, tableWidth, tableHeaderH);
@@ -99,7 +126,8 @@ export function exportConcernTableAsImage(params: {
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
     const rowY = tableStartY + tableHeaderH + i * rowH;
-    const isRejected = item.status === "rejected";
+    const isStrikethrough = STRIKETHROUGH_STATUSES.includes(item.status);
+    const isShort = item.status === "short";
 
     // Row background
     ctx.fillStyle = i % 2 === 0 ? "#f9fafb" : "#ffffff";
@@ -110,52 +138,53 @@ export function exportConcernTableAsImage(params: {
     ctx.lineWidth = 1;
     ctx.strokeRect(tableX, rowY, tableWidth, rowH);
 
-    // Cell text
-    ctx.textAlign = "left";
     const textY = rowY + rowH / 2 + 4;
 
-    // Item Name
-    ctx.fillStyle = isRejected ? "#ef4444" : "#111827";
-    ctx.font = isRejected ? "12px sans-serif" : "bold 12px sans-serif";
+    // --- Item Name ---
+    ctx.textAlign = "left";
+    ctx.fillStyle = isStrikethrough ? "#ef4444" : "#111827";
+    ctx.font = isStrikethrough ? "12px sans-serif" : "bold 12px sans-serif";
     ctx.fillText(item.itemName, tableX + 8, textY);
-    if (isRejected) {
-      const textWidth = ctx.measureText(item.itemName).width;
+    if (isStrikethrough) {
+      const w = ctx.measureText(item.itemName).width;
       ctx.strokeStyle = "#ef4444";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(tableX + 8, textY - 4);
-      ctx.lineTo(tableX + 8 + textWidth, textY - 4);
+      ctx.lineTo(tableX + 8 + w, textY - 4);
       ctx.stroke();
     }
 
-    // Order Qty
-    ctx.fillStyle = isRejected ? "#ef4444" : "#374151";
+    // --- Qty ---
+    // Short: show receivedQty (the amount actually received)
+    // Others: show original orderQty, with strikethrough if applicable
+    const qtyDisplay = isShort
+      ? String(item.receivedQty ?? item.orderQty)
+      : String(item.orderQty);
+
     ctx.font = "12px sans-serif";
-    const qtyStr = String(item.orderQty);
-    ctx.fillText(qtyStr, tableX + colWidths[0] + 8, textY);
-    if (isRejected) {
-      const qtyWidth = ctx.measureText(qtyStr).width;
+    ctx.fillStyle = isStrikethrough ? "#ef4444" : "#374151";
+    ctx.fillText(qtyDisplay, tableX + colWidths[0] + 8, textY);
+    if (isStrikethrough) {
+      const w = ctx.measureText(qtyDisplay).width;
       ctx.strokeStyle = "#ef4444";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(tableX + colWidths[0] + 8, textY - 4);
-      ctx.lineTo(tableX + colWidths[0] + 8 + qtyWidth, textY - 4);
+      ctx.lineTo(tableX + colWidths[0] + 8 + w, textY - 4);
       ctx.stroke();
     }
 
-    // Status
-    const statusLabel =
-      item.status === "accepted"
-        ? "\u2705 Received"
-        : item.status === "rejected"
-          ? "\u274C Not Received"
-          : "\u2014";
+    // --- Status label ---
+    const statusLabel = getStatusLabel(item.status);
     ctx.fillStyle =
       item.status === "accepted"
         ? "#16a34a"
-        : item.status === "rejected"
-          ? "#dc2626"
-          : "#9ca3af";
+        : item.status === "short"
+          ? "#d97706"
+          : isStrikethrough
+            ? "#dc2626"
+            : "#9ca3af";
     ctx.font = "12px sans-serif";
     ctx.fillText(statusLabel, tableX + colWidths[0] + colWidths[1] + 8, textY);
   }
@@ -170,7 +199,7 @@ export function exportConcernTableAsImage(params: {
   ctx.font = "10px sans-serif";
   ctx.textAlign = "center";
   ctx.fillText(
-    `Generated by Shri Hoshnagi F&B Opp. · ${new Date().toLocaleString()}`,
+    `Generated by Shri Hoshnagi F&B Opp. \u00b7 ${new Date().toLocaleString()}`,
     canvasWidth / 2,
     tableStartY + tableHeaderH + tableBodyH + 18,
   );
@@ -178,7 +207,6 @@ export function exportConcernTableAsImage(params: {
   canvas.toBlob((blob) => {
     if (!blob) return;
     const fileName = `order-${orderNo}-concern.png`;
-
     if (
       navigator.share &&
       navigator.canShare &&
@@ -189,9 +217,7 @@ export function exportConcernTableAsImage(params: {
       const file = new File([blob], fileName, { type: "image/png" });
       navigator
         .share({ files: [file], title: `Order #${orderNo} Concern Report` })
-        .catch(() => {
-          downloadBlob(blob, fileName);
-        });
+        .catch(() => downloadBlob(blob, fileName));
     } else {
       downloadBlob(blob, fileName);
     }

@@ -26,13 +26,22 @@ export interface SavedDailyRecord {
   orderNo: number;
 }
 
-export type ConcernStatus = "accepted" | "rejected" | "";
+export type ConcernStatus =
+  | "accepted"
+  | "rejected"
+  | "spoiled"
+  | "expired"
+  | "damage"
+  | "short"
+  | "";
 
 export interface ConcernItemStatus {
   itemName: string;
   category: string;
   orderQty: number;
   status: ConcernStatus;
+  /** Populated only when status === 'short' — the quantity actually received */
+  receivedQty?: number;
 }
 
 export interface ConcernRecord {
