@@ -156,16 +156,23 @@ export default function DailyEntryForm({
     ])
       .then(([cats, asgn]) => {
         setAssignment(asgn);
-        if (cats && cats.length > 0) {
-          let names = cats
-            .map((c) => c.name)
-            .filter((name) => categoryFilter.includes(name));
-          // Filter by assignment if it has allowedCategories
-          if (asgn && asgn.allowedCategories.length > 0) {
-            names = names.filter((n) => asgn.allowedCategories.includes(n));
-          }
-          if (names.length > 0) setCategories(names);
+        // Use categoryFilter as the base list — this guarantees all expected
+        // categories (Dry Store, Beverages, Disposable, Housekeeping) are shown
+        // even if the live canister has not yet seeded them.
+        // If the backend has categories, only keep ones known to the backend too
+        // so admin-deleted categories are respected.
+        const backendNames =
+          cats && cats.length > 0 ? cats.map((c) => c.name) : null;
+        let names = backendNames
+          ? categoryFilter.filter((name) => backendNames.includes(name))
+          : [...categoryFilter];
+        // If none matched (backend missing these categories), fall back to full filter list
+        if (names.length === 0) names = [...categoryFilter];
+        // Filter by assignment allowedCategories only if explicitly restricted
+        if (asgn && asgn.allowedCategories.length > 0) {
+          names = names.filter((n) => asgn.allowedCategories.includes(n));
         }
+        if (names.length > 0) setCategories(names);
       })
       .catch(() => {});
   }, [categoryFilter, session?.restaurantName]);

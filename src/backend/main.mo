@@ -68,6 +68,7 @@ actor {
   stable var adminPassword    : Text              = "admin1234";
   stable var seeded           : Bool              = false;
   stable var seededV2         : Bool              = false;
+  stable var seededV3         : Bool              = false;
   stable var nextId           : Nat               = 1000;
   stable var restaurantAssignments : [RestaurantAssignment] = [];
 
@@ -304,6 +305,33 @@ actor {
 
       let hasHousekeepingItems = Array.find(rawMaterials, func(m : RawMaterial) : Bool { m.category == "Housekeeping" });
       switch (hasHousekeepingItems) {
+        case null {
+          rawMaterials := Array.append(rawMaterials, [
+            { id="m141"; name="SURF /gm";                  category="Housekeeping" },
+            { id="m142"; name="CAUSTIC SODA /kg,gm";       category="Housekeeping" },
+            { id="m143"; name="SEEKH BROOM (JHADU) /pcs"; category="Housekeeping" },
+            { id="m144"; name="WIPER /pcs";                category="Housekeeping" },
+            { id="m145"; name="SUPLEY";                    category="Housekeeping" },
+          ]);
+        };
+        case _ {};
+      };
+    };
+
+    // Seed v3: Guarantee Housekeeping category and items always exist (idempotent)
+    if (not seededV3) {
+      seededV3 := true;
+
+      let hasHkCat = Array.find(masterCategories, func(c : MasterCategory) : Bool { c.name == "Housekeeping" });
+      switch (hasHkCat) {
+        case null {
+          masterCategories := Array.append(masterCategories, [{ id = "c8"; name = "Housekeeping" }]);
+        };
+        case _ {};
+      };
+
+      let hasHkItems = Array.find(rawMaterials, func(m : RawMaterial) : Bool { m.category == "Housekeeping" });
+      switch (hasHkItems) {
         case null {
           rawMaterials := Array.append(rawMaterials, [
             { id="m141"; name="SURF /gm";                  category="Housekeeping" },
