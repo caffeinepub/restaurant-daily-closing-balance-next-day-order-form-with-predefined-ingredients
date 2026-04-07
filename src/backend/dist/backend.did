@@ -1,0 +1,117 @@
+type Timestamp = nat;
+type RestaurantUser = 
+ record {
+   password: text;
+   restaurantName: text;
+   username: text;
+ };
+type RestaurantAssignment = 
+ record {
+   allowedCategories: vec text;
+   allowedItems: vec text;
+   restaurantName: text;
+ };
+type Restaurant = 
+ record {
+   id: text;
+   name: text;
+ };
+type RawMaterial = 
+ record {
+   category: text;
+   id: text;
+   name: text;
+ };
+type Meal = 
+ record {
+   ingredients: vec Ingredient;
+   name: text;
+ };
+type MasterCategory = 
+ record {
+   id: text;
+   name: text;
+ };
+type Ingredient = 
+ record {
+   category: CategoryName;
+   name: text;
+ };
+type DailyRecord = 
+ record {
+   meals: vec Meal;
+   restaurantName: text;
+   timestamp: Timestamp;
+ };
+type ConcernStatus = 
+ variant {
+   damage;
+   expired;
+   notReceived;
+   received;
+   short;
+   spoiled;
+ };
+type ConcernRecord = 
+ record {
+   confirmedAt: nat;
+   confirmedBy: text;
+   itemStatuses: vec ConcernItemStatus;
+   orderId: nat;
+   restaurantName: text;
+ };
+type ConcernItemStatus = 
+ record {
+   itemName: text;
+   orderQty: float64;
+   receivedQty: opt float64;
+   status: ConcernStatus;
+ };
+type CategoryName = text;
+service : {
+  addCategory: (name: text) -> ();
+  addDailyRecord: (meals: vec Meal, timestamp: Timestamp, restaurantName:
+   text) -> (nat);
+  addRawMaterial: (name: text, category: text) -> ();
+  addRestaurant: (name: text) -> ();
+  addUser: (username: text, password: text, restaurantName: text) -> ();
+  deleteCategory: (id: text) -> ();
+  deleteRawMaterial: (id: text) -> ();
+  deleteRestaurant: (id: text) -> ();
+  deleteUser: (username: text) -> ();
+  getAllCategories: () -> (vec record {name: text;}) query;
+  /// Retrieve all stored concern records (for admin / reporting).
+  getAllConcernRecords: () -> (vec ConcernRecord) query;
+  getAllDailyRecords: () -> (vec DailyRecord) query;
+  getCategories: () -> (vec MasterCategory) query;
+  /// Retrieve the confirmed concern record for a specific order, if any.
+  getConcernRecord: (orderId: nat, restaurantName: text) ->
+   (opt ConcernRecord) query;
+  getIngredientsByCategory: (cat: text) ->
+   (vec record {
+          category: text;
+          name: text;
+        }) query;
+  getRawMaterials: () -> (vec RawMaterial) query;
+  getRawMaterialsByCategory: (cat: text) -> (vec RawMaterial) query;
+  getRestaurantAssignment: (restaurantName: text) ->
+   (opt RestaurantAssignment) query;
+  getRestaurants: () -> (vec Restaurant) query;
+  getUsers: () -> (vec RestaurantUser) query;
+  resetToDefaultCredentials: () -> ();
+  /// Save concern statuses for an order. Once saved, the record is permanently
+  /// stored on-chain and visible to all users. Subsequent calls for the same
+  /// (orderId, restaurantName) are silently ignored to enforce immutability.
+  saveConcernRecord: (orderId: nat, restaurantName: text, itemStatuses:
+   vec ConcernItemStatus, confirmedBy: text) -> ();
+  seedDefaultData: () -> ();
+  setAdminPassword: (newPwd: text) -> ();
+  setRestaurantAssignment: (restaurantName: text, allowedCategories:
+   vec text, allowedItems: vec text) -> ();
+  updateCategory: (id: text, name: text) -> ();
+  updateRawMaterial: (id: text, name: text, category: text) -> ();
+  updateRestaurant: (id: text, name: text) -> ();
+  updateUser: (username: text, password: text, restaurantName: text) -> ();
+  verifyAdminPassword: (pwd: text) -> (bool) query;
+  verifyUserLogin: (username: text, password: text) -> (opt text) query;
+}

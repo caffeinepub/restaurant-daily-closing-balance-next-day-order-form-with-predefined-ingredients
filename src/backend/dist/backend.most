@@ -1,0 +1,85 @@
+// Version: 1.0.0
+type CategoryName__119303752 = Text;
+type ConcernItemStatus__286847602 =
+  {
+    itemName : Text;
+    orderQty : Float;
+    receivedQty : ?Float;
+    status : ConcernStatus__547747070
+  };
+type ConcernRecord__895191161 =
+  {
+    confirmedAt : Nat;
+    confirmedBy : Text;
+    itemStatuses : [ConcernItemStatus__286847602];
+    orderId : Nat;
+    restaurantName : Text
+  };
+type ConcernStatus__547747070 =
+  {#damage; #expired; #notReceived; #received; #short; #spoiled};
+type DailyRecord__767580080 =
+  {
+    meals : [Meal__62155794];
+    restaurantName : Text;
+    timestamp : Timestamp__672038077
+  };
+type Data__791452850<K, V> =
+  {var count : Nat__490723111; kvs : [var ?(K, V)]};
+type Ingredient__830977812 =
+  {category : CategoryName__119303752; name : Text};
+type Internal__8484328<K, V> =
+  {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
+type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
+type Map__158565046<K, V> = Map__297112838<K, V>;
+type Map__297112838<K, V> =
+  {var root : Node__46230540<K, V>; var size : Nat__490723111};
+type Map__605269027<K, V> = Map__158565046<K, V>;
+type MasterCategory__822347728 = {id : Text; name : Text};
+type Meal__62155794 = {ingredients : [Ingredient__830977812]; name : Text};
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__46230540<K, V> =
+  {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
+type RawMaterial__1048771668 = {category : Text; id : Text; name : Text};
+type RestaurantAssignment__855465612 =
+  {allowedCategories : [Text]; allowedItems : [Text]; restaurantName : Text};
+type RestaurantUser__437058037 =
+  {password : Text; restaurantName : Text; username : Text};
+type Restaurant__353581450 = {id : Text; name : Text};
+type Timestamp__672038077 = Nat;
+type UserProfile__491224006 = {name : Text; restaurantName : Text};
+type UserRole__599675725 = {#admin; #guest; #user};
+actor {
+  stable accessControlState :
+    {
+      var adminAssigned : Bool;
+      userRoles : Map__605269027<Principal, UserRole__599675725>
+    };
+  stable var adminPassword : Text;
+  stable allIngredients : [Ingredient__830977812];
+  stable categories : [{name : Text}];
+  stable var concernRecords : [ConcernRecord__895191161];
+  stable var globalRecords : [DailyRecord__767580080];
+  stable legacyIngredients : [Ingredient__830977812];
+  stable var masterCategories : [MasterCategory__822347728];
+  stable var masterRestaurants : [Restaurant__353581450];
+  stable newIngredients : [Ingredient__830977812];
+  stable var nextDailyRecordId : Nat;
+  stable var nextId : Nat;
+  stable var rawMaterials : [RawMaterial__1048771668];
+  stable var restaurantAssignments : [RestaurantAssignment__855465612];
+  stable var restaurantUsers : [RestaurantUser__437058037];
+  stable var seeded : Bool;
+  stable var seededV2 : Bool;
+  stable var seededV3 : Bool;
+  stable userProfiles :
+    {
+      var root : Node__46230540<Principal, UserProfile__491224006>;
+      var size : Nat__490723111
+    };
+  stable users :
+    {
+      var root : Node__46230540<Principal, [DailyRecord__767580080]>;
+      var size : Nat__490723111
+    }
+};

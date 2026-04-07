@@ -16,13 +16,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { ArrowLeft, Camera, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Camera, CheckCircle, Loader2, Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import BackendConnectionErrorCard from "../components/BackendConnectionErrorCard";
 import { useActorDiagnostics } from "../hooks/useActorDiagnostics";
-import { useGetAllDailyRecords } from "../hooks/useQueries";
-import type { ConcernRecord, ConcernStatus } from "../types/dailyForm";
+import {
+  useGetAllConcernRecords,
+  useGetAllDailyRecords,
+  useSaveConcernRecord,
+} from "../hooks/useQueries";
+import { useRestaurantSession } from "../hooks/useRestaurantSession";
+import type { ConcernStatus } from "../types/dailyForm";
 import { formatDateDDMMYYYY } from "../utils/dateFormat";
 import { exportConcernTableAsImage } from "../utils/exportTableAsImage";
 import { isWithin24Hours, toMilliseconds } from "../utils/timestampUtils";
@@ -30,15 +35,48 @@ import { isWithin24Hours, toMilliseconds } from "../utils/timestampUtils";
 /** Statuses that cause red strikethrough on the entire row */
 const STRIKETHROUGH_STATUSES: ConcernStatus[] = [
   "rejected",
+  "notReceived",
   "spoiled",
   "expired",
   "damage",
 ];
 
+function getStatusLabel(status: ConcernStatus): string {
+  switch (status) {
+    case "accepted":
+    case "received":
+      return "✅ Received";
+    case "rejected":
+    case "notReceived":
+      return "❌ Not Received";
+    case "short":
+      return "🟧 Short";
+    case "spoiled":
+      return "🟥 Spoiled";
+    case "expired":
+      return "⏰ Expired";
+    case "damage":
+      return "🟨 Damage";
+    default:
+      return "—";
+  }
+}
+
+function getStatusColor(status: ConcernStatus): string {
+  if (status === "accepted" || status === "received") return "text-green-600";
+  if (status === "short") return "text-orange-500";
+  if (STRIKETHROUGH_STATUSES.includes(status)) return "text-red-600";
+  return "text-muted-foreground";
+}
+
 export default function RaisedConcernPage() {
   const { recordId } = useParams({ from: "/history/$recordId/concern" });
   const { data: records, isLoading, error } = useGetAllDailyRecords();
+  const { data: concernRecords, isLoading: concernLoading } =
+    useGetAllConcernRecords();
+  const saveConcern = useSaveConcernRecord();
   const { hasActorError, isActorLoading, retry } = useActorDiagnostics();
+  const { session } = useRestaurantSession();
   const [isRetrying, setIsRetrying] = useState(false);
   const navigate = useNavigate();
 
@@ -48,50 +86,53 @@ export default function RaisedConcernPage() {
   // Items with nextDayOrder > 0 only
   const orderItems = record?.entries.filter((e) => e.nextDayOrder > 0) ?? [];
 
+  // Check if a confirmed concern already exists in backend (decoded to local format)
+  const confirmedConcern = concernRecords?.find(
+    (c) =>
+      c.recordIndex === recordIndexNum &&
+      c.restaurantName === record?.restaurantName,
+  );
+  const isConfirmed = !!confirmedConcern;
+
   const [statuses, setStatuses] = useState<ConcernStatus[]>([]);
-  /** Received qty for "Short" rows — keyed by item index */
   const [receivedQtys, setReceivedQtys] = useState<Record<number, string>>({});
 
-  // Load saved concern from localStorage when record becomes available
+  // Load statuses from confirmed backend concern (authoritative) or initialize empty
   useEffect(() => {
     if (!record) return;
     const items = record.entries.filter((e) => e.nextDayOrder > 0);
-    const saved = localStorage.getItem(`concern_${recordId}`);
-    if (saved) {
-      try {
-        const parsed: ConcernRecord = JSON.parse(saved);
-        const loadedStatuses = items.map((item) => {
-          const found = parsed.itemStatuses.find(
-            (s) => s.itemName === item.name,
-          );
-          return (found?.status ?? "") as ConcernStatus;
-        });
-        const loadedQtys: Record<number, string> = {};
-        items.forEach((item, idx) => {
-          const found = parsed.itemStatuses.find(
-            (s) => s.itemName === item.name,
-          );
-          if (found?.status === "short" && found.receivedQty !== undefined) {
-            loadedQtys[idx] = String(found.receivedQty);
-          }
-        });
-        setStatuses(loadedStatuses);
-        setReceivedQtys(loadedQtys);
-      } catch {
-        setStatuses(items.map(() => ""));
-      }
+
+    if (confirmedConcern) {
+      const loadedStatuses = items.map((item) => {
+        const found = confirmedConcern.itemStatuses.find(
+          (s) => s.itemName === item.name,
+        );
+        return (found?.status ?? "") as ConcernStatus;
+      });
+      const loadedQtys: Record<number, string> = {};
+      items.forEach((item, idx) => {
+        const found = confirmedConcern.itemStatuses.find(
+          (s) => s.itemName === item.name,
+        );
+        if (found?.status === "short" && found.receivedQty !== undefined) {
+          loadedQtys[idx] = String(found.receivedQty);
+        }
+      });
+      setStatuses(loadedStatuses);
+      setReceivedQtys(loadedQtys);
     } else {
-      setStatuses(items.map(() => ""));
+      setStatuses(items.map(() => "" as ConcernStatus));
+      setReceivedQtys({});
     }
-  }, [record, recordId]);
+  }, [record, confirmedConcern]);
 
   const isWithin24h = record ? isWithin24Hours(record.timestamp) : false;
+  const isReadOnly = isConfirmed || !isWithin24h;
 
   const allStatusSelected =
     statuses.length > 0 &&
     statuses.every((s, idx) => {
       if (s === "") return false;
-      // For "short", require a valid received qty
       if (s === "short") {
         const v = receivedQtys[idx];
         return v !== undefined && v !== "" && !Number.isNaN(Number(v));
@@ -100,12 +141,12 @@ export default function RaisedConcernPage() {
     });
 
   const handleStatusChange = (idx: number, value: ConcernStatus) => {
+    if (isReadOnly) return;
     setStatuses((prev) => {
       const next = [...prev];
       next[idx] = value;
       return next;
     });
-    // Clear receivedQty when switching away from "short"
     if (value !== "short") {
       setReceivedQtys((prev) => {
         const next = { ...prev };
@@ -116,33 +157,44 @@ export default function RaisedConcernPage() {
   };
 
   const handleReceivedQtyChange = (idx: number, value: string) => {
+    if (isReadOnly) return;
     setReceivedQtys((prev) => ({ ...prev, [idx]: value }));
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!record) return;
-    const concernRecord: ConcernRecord = {
-      recordIndex: record.recordIndex,
-      restaurantName: record.restaurantName,
-      timestamp: toMilliseconds(record.timestamp),
-      itemStatuses: orderItems.map((item, idx) => {
-        const status = statuses[idx];
-        const base = {
-          itemName: item.name,
-          category: item.category,
-          orderQty: item.nextDayOrder,
-          status,
-        };
-        if (status === "short") {
-          return { ...base, receivedQty: Number(receivedQtys[idx] ?? 0) };
-        }
-        return base;
-      }),
-      confirmedAt: Date.now(),
-    };
-    localStorage.setItem(`concern_${recordId}`, JSON.stringify(concernRecord));
-    toast.success("Concern recorded successfully!");
-    navigate({ to: "/history" });
+
+    const itemStatuses = orderItems.map((item, idx) => {
+      const status = statuses[idx];
+      const base = {
+        itemName: item.name,
+        category: item.category,
+        orderQty: item.nextDayOrder,
+        status,
+        receivedQty: undefined as number | undefined,
+      };
+      if (status === "short") {
+        return { ...base, receivedQty: Number(receivedQtys[idx] ?? 0) };
+      }
+      return base;
+    });
+
+    try {
+      await saveConcern.mutateAsync({
+        orderId: record.recordIndex,
+        restaurantName: record.restaurantName,
+        itemStatuses,
+        confirmedBy: session?.username ?? "user",
+      });
+      // Clean up any stale localStorage entry
+      localStorage.removeItem(`concern_${recordId}`);
+      toast.success("Concern confirmed and saved for all users!");
+      navigate({ to: "/history" });
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to save concern",
+      );
+    }
   };
 
   const handleExportImage = () => {
@@ -201,7 +253,7 @@ export default function RaisedConcernPage() {
     );
   }
 
-  if (isLoading || isActorLoading) {
+  if (isLoading || isActorLoading || concernLoading) {
     return (
       <div className="flex items-center justify-center py-16">
         <div className="text-center space-y-3">
@@ -254,11 +306,19 @@ export default function RaisedConcernPage() {
       <Card className="border-2 border-gray-800">
         <CardHeader className="pb-2 pt-3 px-3">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm font-bold bg-gray-900 text-white rounded px-2 py-1">
                 Order #{record.orderNo}
               </span>
-              <CardTitle className="text-base">Raised Concern</CardTitle>
+              <CardTitle className="text-base flex items-center gap-1.5">
+                Raised Concern
+                {isConfirmed && (
+                  <span className="text-xs font-medium bg-green-100 text-green-700 border border-green-300 rounded px-1.5 py-0.5 flex items-center gap-1">
+                    <Lock className="w-3 h-3" />
+                    Confirmed
+                  </span>
+                )}
+              </CardTitle>
             </div>
             <Button
               size="sm"
@@ -293,7 +353,14 @@ export default function RaisedConcernPage() {
               <span className="font-semibold">{orderItems.length}</span>
             </div>
           </div>
-          {!isWithin24h && (
+          {isConfirmed && (
+            <div className="mt-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1 flex items-center gap-1">
+              <Lock className="w-3 h-3 shrink-0" />
+              This concern has been confirmed and is permanently locked. No
+              further changes are allowed.
+            </div>
+          )}
+          {!isConfirmed && !isWithin24h && (
             <div className="mt-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1">
               ⚠️ Concern window has closed (24 hours passed). Read-only.
             </div>
@@ -320,10 +387,8 @@ export default function RaisedConcernPage() {
             </TableHeader>
             <TableBody>
               {orderItems.map((item, idx) => {
-                const status = statuses[idx] ?? "";
-                const isStrikethrough = STRIKETHROUGH_STATUSES.includes(
-                  status as ConcernStatus,
-                );
+                const status = statuses[idx] ?? ("" as ConcernStatus);
+                const isStrikethrough = STRIKETHROUGH_STATUSES.includes(status);
                 const isShort = status === "short";
                 const rowNum = idx + 1;
                 return (
@@ -340,9 +405,9 @@ export default function RaisedConcernPage() {
                       {item.name}
                     </TableCell>
 
-                    {/* Order Qty — editable input when Short */}
+                    {/* Order Qty — editable input when Short and not locked */}
                     <TableCell className="text-center py-1.5 pl-0 w-10">
-                      {isShort && isWithin24h ? (
+                      {isShort && !isReadOnly ? (
                         <input
                           type="number"
                           inputMode="numeric"
@@ -360,7 +425,7 @@ export default function RaisedConcernPage() {
                             isStrikethrough ? "line-through text-red-500" : ""
                           }`}
                         >
-                          {status === "short" && receivedQtys[idx]
+                          {isShort && receivedQtys[idx]
                             ? receivedQtys[idx]
                             : item.nextDayOrder}
                         </span>
@@ -369,7 +434,7 @@ export default function RaisedConcernPage() {
 
                     {/* Status dropdown / read-only */}
                     <TableCell className="text-center py-1.5 pr-1">
-                      {isWithin24h ? (
+                      {!isReadOnly ? (
                         <Select
                           value={status}
                           onValueChange={(v) =>
@@ -383,10 +448,10 @@ export default function RaisedConcernPage() {
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="accepted">
+                            <SelectItem value="received">
                               ✅ Received
                             </SelectItem>
-                            <SelectItem value="rejected">
+                            <SelectItem value="notReceived">
                               ❌ Not Received
                             </SelectItem>
                             <SelectItem value="short">🟧 Short</SelectItem>
@@ -397,31 +462,9 @@ export default function RaisedConcernPage() {
                         </Select>
                       ) : (
                         <span
-                          className={`text-xs font-medium ${
-                            status === "accepted"
-                              ? "text-green-600"
-                              : status === "short"
-                                ? "text-orange-500"
-                                : STRIKETHROUGH_STATUSES.includes(
-                                      status as ConcernStatus,
-                                    )
-                                  ? "text-red-600"
-                                  : "text-muted-foreground"
-                          }`}
+                          className={`text-xs font-medium ${getStatusColor(status)}`}
                         >
-                          {status === "accepted"
-                            ? "✅ Received"
-                            : status === "rejected"
-                              ? "❌ Not Received"
-                              : status === "short"
-                                ? "🟧 Short"
-                                : status === "spoiled"
-                                  ? "🟥 Spoiled"
-                                  : status === "expired"
-                                    ? "⏰ Expired"
-                                    : status === "damage"
-                                      ? "🟨 Damage"
-                                      : "—"}
+                          {getStatusLabel(status)}
                         </span>
                       )}
                     </TableCell>
@@ -433,8 +476,8 @@ export default function RaisedConcernPage() {
         </CardContent>
       </Card>
 
-      {/* Confirm Button */}
-      {isWithin24h && (
+      {/* Confirm Button — only shown when within 24h AND not yet confirmed */}
+      {isWithin24h && !isConfirmed && (
         <div className="pb-6">
           {!allStatusSelected && (
             <p className="text-xs text-muted-foreground text-center mb-2">
@@ -450,12 +493,16 @@ export default function RaisedConcernPage() {
           )}
           <Button
             className="w-full gap-2 bg-gray-900 hover:bg-gray-800 text-white font-bold"
-            disabled={!allStatusSelected}
+            disabled={!allStatusSelected || saveConcern.isPending}
             onClick={handleConfirm}
             data-ocid="concern.confirm.button"
           >
-            <CheckCircle className="w-4 h-4" />
-            Confirm Concern
+            {saveConcern.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <CheckCircle className="w-4 h-4" />
+            )}
+            {saveConcern.isPending ? "Saving..." : "Confirm Concern"}
           </Button>
         </div>
       )}

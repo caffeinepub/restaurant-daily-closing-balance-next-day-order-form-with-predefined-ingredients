@@ -26,6 +26,7 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
   CalendarSearch,
+  CheckCircle,
   ChevronRight,
   Download,
   FileText,
@@ -35,9 +36,12 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 import { useActorDiagnostics } from "../hooks/useActorDiagnostics";
-import { useGetAllDailyRecords } from "../hooks/useQueries";
+import {
+  useGetAllConcernRecords,
+  useGetAllDailyRecords,
+} from "../hooks/useQueries";
 import { useRestaurantSession } from "../hooks/useRestaurantSession";
-import type { SavedDailyRecord } from "../types/dailyForm";
+import type { ConcernRecord, SavedDailyRecord } from "../types/dailyForm";
 import { exportRecordToCSV } from "../utils/csvExport";
 import { formatDateDDMMYYYY } from "../utils/dateFormat";
 import { formatRecordAsPlainText } from "../utils/recordPlainText";
@@ -67,6 +71,33 @@ function filterRecords(
   });
 }
 
+function getConcernButtonStyle(
+  record: SavedDailyRecord,
+  concern: ConcernRecord | undefined,
+): { className: string; label: string; icon: "alert" | "check" } {
+  if (concern) {
+    return {
+      className:
+        "gap-1 border-2 border-orange-500 bg-orange-50 text-orange-700 hover:bg-orange-100 font-bold",
+      label: "View Concern (Confirmed)",
+      icon: "check",
+    };
+  }
+  if (isWithin24Hours(record.timestamp)) {
+    return {
+      className: "gap-1 bg-red-600 hover:bg-red-700 text-white font-bold",
+      label: "Raised Concern",
+      icon: "alert",
+    };
+  }
+  return {
+    className:
+      "gap-1 bg-muted text-muted-foreground hover:bg-muted/80 font-bold",
+    label: "Raised Concern",
+    icon: "alert",
+  };
+}
+
 interface HistoryContentProps {
   /** Optional title override */
   title?: string;
@@ -78,6 +109,7 @@ export default function HistoryContent({
   const { session } = useRestaurantSession();
   const navigate = useNavigate();
   const { data: records, isLoading, error } = useGetAllDailyRecords();
+  const { data: concernRecords } = useGetAllConcernRecords();
   const { hasActorError, isActorLoading, retry } = useActorDiagnostics();
   const [isRetrying, setIsRetrying] = useState(false);
   const [fromDate, setFromDate] = useState("");
@@ -89,6 +121,15 @@ export default function HistoryContent({
   if (!session) return null;
 
   const restaurantName = session.restaurantName;
+
+  const getConcernForRecord = (
+    record: SavedDailyRecord,
+  ): ConcernRecord | undefined =>
+    concernRecords?.find(
+      (c) =>
+        c.recordIndex === record.recordIndex &&
+        c.restaurantName === record.restaurantName,
+    );
 
   const handleViewRecord = (recordIndex: number) => {
     navigate({
@@ -210,7 +251,7 @@ export default function HistoryContent({
           </div>
         </div>
 
-        {isLoading || isActorLoading ? (
+        {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="text-center space-y-4">
               <Loader2
@@ -258,10 +299,8 @@ export default function HistoryContent({
                       ...new Set(record.entries.map((e) => e.category)),
                     ];
                     const rowNum = idx + 1;
-                    const within24h = isWithin24Hours(record.timestamp);
-                    const concernSaved = !!localStorage.getItem(
-                      `concern_${record.recordIndex}`,
-                    );
+                    const concern = getConcernForRecord(record);
+                    const btn = getConcernButtonStyle(record, concern);
                     return (
                       <TableRow
                         key={record.recordIndex}
@@ -284,18 +323,18 @@ export default function HistoryContent({
                           <div className="flex items-center justify-end gap-1 flex-wrap">
                             <Button
                               size="sm"
-                              className={
-                                within24h
-                                  ? "gap-1 bg-red-600 hover:bg-red-700 text-white font-bold"
-                                  : "gap-1 bg-gray-500 hover:bg-gray-600 text-white font-bold"
-                              }
+                              className={btn.className}
                               onClick={() =>
                                 handleRaiseConcern(record.recordIndex)
                               }
                               data-ocid={`history.concern_button.${rowNum}`}
                             >
-                              <AlertTriangle className="w-3.5 h-3.5" />
-                              {concernSaved ? "View Concern" : "Raised Concern"}
+                              {btn.icon === "check" ? (
+                                <CheckCircle className="w-3.5 h-3.5" />
+                              ) : (
+                                <AlertTriangle className="w-3.5 h-3.5" />
+                              )}
+                              {btn.label}
                             </Button>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -354,10 +393,8 @@ export default function HistoryContent({
                   ...new Set(record.entries.map((e) => e.category)),
                 ];
                 const cardNum = idx + 1;
-                const within24h = isWithin24Hours(record.timestamp);
-                const concernSaved = !!localStorage.getItem(
-                  `concern_${record.recordIndex}`,
-                );
+                const concern = getConcernForRecord(record);
+                const btn = getConcernButtonStyle(record, concern);
                 return (
                   <Card
                     key={record.recordIndex}
@@ -383,17 +420,17 @@ export default function HistoryContent({
                         {record.entries.length !== 1 ? "s" : ""}
                       </div>
                       <Button
-                        className={
-                          within24h
-                            ? "w-full gap-2 bg-red-600 hover:bg-red-700 text-white font-bold"
-                            : "w-full gap-2 bg-gray-500 hover:bg-gray-600 text-white font-bold"
-                        }
+                        className={`w-full ${btn.className}`}
                         size="sm"
                         onClick={() => handleRaiseConcern(record.recordIndex)}
                         data-ocid={`history.concern_button.${cardNum}`}
                       >
-                        <AlertTriangle className="w-4 h-4" />
-                        {concernSaved ? "View Concern" : "Raised Concern"}
+                        {btn.icon === "check" ? (
+                          <CheckCircle className="w-4 h-4" />
+                        ) : (
+                          <AlertTriangle className="w-4 h-4" />
+                        )}
+                        {btn.label}
                       </Button>
                       <div className="flex items-center justify-between gap-2">
                         <DropdownMenu>

@@ -1,0 +1,19 @@
+{
+  "overview": "Shri Hoshnagi F&B Opp. is a mobile-first restaurant inventory and operations management PWA for daily stock balancing, order entry, and multi-restaurant management, running on the Internet Computer blockchain.",
+  "features": [
+    "Daily closing balance and next-day order entry",
+    "Raised Concern workflow with permanent blockchain-persisted confirmation",
+    "Multi-restaurant support with per-user access control",
+    "Admin panel with reports, category/item assignment, and user management",
+    "Installable as PWA on Android and iOS"
+  ],
+  "category": "productivity",
+  "tags": [
+    "restaurant",
+    "inventory",
+    "f-b",
+    "pwa",
+    "icp"
+  ],
+  "last_updated": "2026-04-07T21:05:47.156Z"
+}

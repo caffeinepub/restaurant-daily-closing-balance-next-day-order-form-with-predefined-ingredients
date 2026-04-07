@@ -1,17 +1,19 @@
-import Array "mo:base/Array";
+import Array "mo:core/Array";
+import Int "mo:core/Int";
 import Map "mo:core/Map";
-import Nat "mo:base/Nat";
+import Nat "mo:core/Nat";
 import Principal "mo:core/Principal";
-import Text "mo:base/Text";
-
-import AccessControl "authorization/access-control";
-import MixinAuthorization "authorization/MixinAuthorization";
+import Text "mo:core/Text";
+import Time "mo:core/Time";
 
 actor {
 
-  // ─── Authorization (kept for upgrade compatibility) ────────────────────────
-  let accessControlState = AccessControl.initState();
-  include MixinAuthorization(accessControlState);
+  // ─── Authorization state (kept for upgrade compatibility with .most schema) ─
+  type UserRole = { #admin; #user; #guest };
+  stable let accessControlState = {
+    var adminAssigned : Bool = false;
+    userRoles = Map.empty<Principal, UserRole>();
+  };
 
   // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -47,16 +49,42 @@ actor {
     allowedItems     : [Text];
   };
 
+  // ─── Concern Types ────────────────────────────────────────────────────────
+
+  type ConcernStatus = {
+    #received;
+    #notReceived;
+    #short;
+    #spoiled;
+    #expired;
+    #damage;
+  };
+
+  type ConcernItemStatus = {
+    itemName    : Text;
+    orderQty    : Float;
+    status      : ConcernStatus;
+    receivedQty : ?Float;
+  };
+
+  type ConcernRecord = {
+    orderId        : Nat;
+    restaurantName : Text;
+    itemStatuses   : [ConcernItemStatus];
+    confirmedAt    : Nat;
+    confirmedBy    : Text;
+  };
+
   // ─── OLD Stable Vars (kept verbatim for upgrade compatibility) ────────────
   stable var nextDailyRecordId : Nat = 0;
-  let users = Map.empty<Principal, [DailyRecord]>();
-  let userProfiles = Map.empty<Principal, UserProfile>();
+  stable let users = Map.empty<Principal, [DailyRecord]>();
+  stable let userProfiles = Map.empty<Principal, UserProfile>();
 
-  let legacyIngredients : [Ingredient] = [];
-  let newIngredients    : [Ingredient] = [];
-  let allIngredients    : [Ingredient] = [];
+  stable let legacyIngredients : [Ingredient] = [];
+  stable let newIngredients    : [Ingredient] = [];
+  stable let allIngredients    : [Ingredient] = [];
 
-  let categories : [{ name : Text }] = [];
+  stable let categories : [{ name : Text }] = [];
 
   // ─── NEW Stable State ─────────────────────────────────────────────────────
 
@@ -71,12 +99,13 @@ actor {
   stable var seededV3         : Bool              = false;
   stable var nextId           : Nat               = 1000;
   stable var restaurantAssignments : [RestaurantAssignment] = [];
+  stable var concernRecords        : [ConcernRecord]        = [];
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
   func genId() : Text {
     nextId += 1;
-    Nat.toText(nextId);
+    nextId.toText();
   };
 
   // ─── Seed Default Data ────────────────────────────────────────────────────
@@ -91,23 +120,21 @@ actor {
     };
 
     // Always ensure default users exist
-    let hasAndaaz = Array.find(restaurantUsers, func(u : RestaurantUser) : Bool { u.username == "andaaz" });
-    let hasKaiwok = Array.find(restaurantUsers, func(u : RestaurantUser) : Bool { u.username == "kaiwok" });
     if (restaurantUsers.size() == 0) {
       restaurantUsers := [
         { username = "andaaz"; password = "andaaz123"; restaurantName = "Andaaz" },
         { username = "kaiwok"; password = "kaiwok123"; restaurantName = "Kai wok Express" },
       ];
     } else {
-      switch (hasAndaaz) {
+      switch (restaurantUsers.find(func(u : RestaurantUser) : Bool { u.username == "andaaz" })) {
         case null {
-          restaurantUsers := Array.append(restaurantUsers, [{ username = "andaaz"; password = "andaaz123"; restaurantName = "Andaaz" }]);
+          restaurantUsers := restaurantUsers.concat([{ username = "andaaz"; password = "andaaz123"; restaurantName = "Andaaz" }]);
         };
         case _ {};
       };
-      switch (hasKaiwok) {
+      switch (restaurantUsers.find(func(u : RestaurantUser) : Bool { u.username == "kaiwok" })) {
         case null {
-          restaurantUsers := Array.append(restaurantUsers, [{ username = "kaiwok"; password = "kaiwok123"; restaurantName = "Kai wok Express" }]);
+          restaurantUsers := restaurantUsers.concat([{ username = "kaiwok"; password = "kaiwok123"; restaurantName = "Kai wok Express" }]);
         };
         case _ {};
       };
@@ -209,26 +236,23 @@ actor {
     if (not seededV2) {
       seededV2 := true;
 
-      let hasDryStore = Array.find(masterCategories, func(c : MasterCategory) : Bool { c.name == "Dry Store" });
-      switch (hasDryStore) {
+      switch (masterCategories.find(func(c : MasterCategory) : Bool { c.name == "Dry Store" })) {
         case null {
-          masterCategories := Array.append(masterCategories, [{ id = "c7"; name = "Dry Store" }]);
+          masterCategories := masterCategories.concat([{ id = "c7"; name = "Dry Store" }]);
         };
         case _ {};
       };
 
-      let hasHousekeeping = Array.find(masterCategories, func(c : MasterCategory) : Bool { c.name == "Housekeeping" });
-      switch (hasHousekeeping) {
+      switch (masterCategories.find(func(c : MasterCategory) : Bool { c.name == "Housekeeping" })) {
         case null {
-          masterCategories := Array.append(masterCategories, [{ id = "c8"; name = "Housekeeping" }]);
+          masterCategories := masterCategories.concat([{ id = "c8"; name = "Housekeeping" }]);
         };
         case _ {};
       };
 
-      let hasDryStoreItems = Array.find(rawMaterials, func(m : RawMaterial) : Bool { m.category == "Dry Store" });
-      switch (hasDryStoreItems) {
+      switch (rawMaterials.find(func(m : RawMaterial) : Bool { m.category == "Dry Store" })) {
         case null {
-          rawMaterials := Array.append(rawMaterials, [
+          rawMaterials := rawMaterials.concat([
             { id="m72";  name="ARARОТ (CORNFLOUR) /kg,gm";  category="Dry Store" },
             { id="m73";  name="AJINOMOTO /pkt";              category="Dry Store" },
             { id="m74";  name="AMCHUR POWDER /kg,gm";        category="Dry Store" },
@@ -303,10 +327,9 @@ actor {
         case _ {};
       };
 
-      let hasHousekeepingItems = Array.find(rawMaterials, func(m : RawMaterial) : Bool { m.category == "Housekeeping" });
-      switch (hasHousekeepingItems) {
+      switch (rawMaterials.find(func(m : RawMaterial) : Bool { m.category == "Housekeeping" })) {
         case null {
-          rawMaterials := Array.append(rawMaterials, [
+          rawMaterials := rawMaterials.concat([
             { id="m141"; name="SURF /gm";                  category="Housekeeping" },
             { id="m142"; name="CAUSTIC SODA /kg,gm";       category="Housekeeping" },
             { id="m143"; name="SEEKH BROOM (JHADU) /pcs"; category="Housekeeping" },
@@ -322,18 +345,16 @@ actor {
     if (not seededV3) {
       seededV3 := true;
 
-      let hasHkCat = Array.find(masterCategories, func(c : MasterCategory) : Bool { c.name == "Housekeeping" });
-      switch (hasHkCat) {
+      switch (masterCategories.find(func(c : MasterCategory) : Bool { c.name == "Housekeeping" })) {
         case null {
-          masterCategories := Array.append(masterCategories, [{ id = "c8"; name = "Housekeeping" }]);
+          masterCategories := masterCategories.concat([{ id = "c8"; name = "Housekeeping" }]);
         };
         case _ {};
       };
 
-      let hasHkItems = Array.find(rawMaterials, func(m : RawMaterial) : Bool { m.category == "Housekeeping" });
-      switch (hasHkItems) {
+      switch (rawMaterials.find(func(m : RawMaterial) : Bool { m.category == "Housekeeping" })) {
         case null {
-          rawMaterials := Array.append(rawMaterials, [
+          rawMaterials := rawMaterials.concat([
             { id="m141"; name="SURF /gm";                  category="Housekeeping" },
             { id="m142"; name="CAUSTIC SODA /kg,gm";       category="Housekeeping" },
             { id="m143"; name="SEEKH BROOM (JHADU) /pcs"; category="Housekeeping" },
@@ -364,7 +385,7 @@ actor {
     restaurantName : Text,
   ) : async Nat {
     let rec : DailyRecord = { meals; timestamp; restaurantName };
-    globalRecords := Array.append(globalRecords, [rec]);
+    globalRecords := globalRecords.concat([rec]);
     globalRecords.size() - 1;
   };
 
@@ -378,17 +399,17 @@ actor {
 
   public func addRestaurant(name : Text) : async () {
     let id = genId();
-    masterRestaurants := Array.append(masterRestaurants, [{ id; name }]);
+    masterRestaurants := masterRestaurants.concat([{ id; name }]);
   };
 
   public func updateRestaurant(id : Text, name : Text) : async () {
-    masterRestaurants := Array.map(masterRestaurants, func(r : Restaurant) : Restaurant {
+    masterRestaurants := masterRestaurants.map(func(r : Restaurant) : Restaurant {
       if (r.id == id) { { id; name } } else r;
     });
   };
 
   public func deleteRestaurant(id : Text) : async () {
-    masterRestaurants := Array.filter(masterRestaurants, func(r : Restaurant) : Bool { r.id != id });
+    masterRestaurants := masterRestaurants.filter(func(r : Restaurant) : Bool { r.id != id });
   };
 
   // ─── Restaurant Users ─────────────────────────────────────────────────────
@@ -396,23 +417,23 @@ actor {
   public query func getUsers() : async [RestaurantUser] { restaurantUsers };
 
   public func addUser(username : Text, password : Text, restaurantName : Text) : async () {
-    restaurantUsers := Array.append(restaurantUsers, [{ username; password; restaurantName }]);
+    restaurantUsers := restaurantUsers.concat([{ username; password; restaurantName }]);
   };
 
   public func updateUser(username : Text, password : Text, restaurantName : Text) : async () {
-    restaurantUsers := Array.map(restaurantUsers, func(u : RestaurantUser) : RestaurantUser {
+    restaurantUsers := restaurantUsers.map(func(u : RestaurantUser) : RestaurantUser {
       if (u.username == username) { { username; password; restaurantName } } else u;
     });
   };
 
   public func deleteUser(username : Text) : async () {
-    restaurantUsers := Array.filter(restaurantUsers, func(u : RestaurantUser) : Bool {
+    restaurantUsers := restaurantUsers.filter(func(u : RestaurantUser) : Bool {
       u.username != username;
     });
   };
 
   public query func verifyUserLogin(username : Text, password : Text) : async ?Text {
-    let found = Array.find(restaurantUsers, func(u : RestaurantUser) : Bool {
+    let found = restaurantUsers.find(func(u : RestaurantUser) : Bool {
       u.username == username and u.password == password;
     });
     switch (found) {
@@ -427,17 +448,17 @@ actor {
 
   public func addCategory(name : Text) : async () {
     let id = genId();
-    masterCategories := Array.append(masterCategories, [{ id; name }]);
+    masterCategories := masterCategories.concat([{ id; name }]);
   };
 
   public func updateCategory(id : Text, name : Text) : async () {
-    masterCategories := Array.map(masterCategories, func(c : MasterCategory) : MasterCategory {
+    masterCategories := masterCategories.map(func(c : MasterCategory) : MasterCategory {
       if (c.id == id) { { id; name } } else c;
     });
   };
 
   public func deleteCategory(id : Text) : async () {
-    masterCategories := Array.filter(masterCategories, func(c : MasterCategory) : Bool {
+    masterCategories := masterCategories.filter(func(c : MasterCategory) : Bool {
       c.id != id;
     });
   };
@@ -447,28 +468,28 @@ actor {
   public query func getRawMaterials() : async [RawMaterial] { rawMaterials };
 
   public query func getRawMaterialsByCategory(cat : Text) : async [RawMaterial] {
-    Array.filter(rawMaterials, func(m : RawMaterial) : Bool { m.category == cat });
+    rawMaterials.filter(func(m : RawMaterial) : Bool { m.category == cat });
   };
 
   public func addRawMaterial(name : Text, category : Text) : async () {
     let id = genId();
-    rawMaterials := Array.append(rawMaterials, [{ id; name; category }]);
+    rawMaterials := rawMaterials.concat([{ id; name; category }]);
   };
 
   public func updateRawMaterial(id : Text, name : Text, category : Text) : async () {
-    rawMaterials := Array.map(rawMaterials, func(m : RawMaterial) : RawMaterial {
+    rawMaterials := rawMaterials.map(func(m : RawMaterial) : RawMaterial {
       if (m.id == id) { { id; name; category } } else m;
     });
   };
 
   public func deleteRawMaterial(id : Text) : async () {
-    rawMaterials := Array.filter(rawMaterials, func(m : RawMaterial) : Bool { m.id != id });
+    rawMaterials := rawMaterials.filter(func(m : RawMaterial) : Bool { m.id != id });
   };
 
   // ─── Restaurant Assignments ───────────────────────────────────────────────
 
   public query func getRestaurantAssignment(restaurantName : Text) : async ?RestaurantAssignment {
-    Array.find(restaurantAssignments, func(a : RestaurantAssignment) : Bool {
+    restaurantAssignments.find(func(a : RestaurantAssignment) : Bool {
       a.restaurantName == restaurantName;
     });
   };
@@ -478,16 +499,13 @@ actor {
     allowedCategories : [Text],
     allowedItems      : [Text],
   ) : async () {
-    let exists = Array.find(restaurantAssignments, func(a : RestaurantAssignment) : Bool {
-      a.restaurantName == restaurantName;
-    });
     let newEntry : RestaurantAssignment = { restaurantName; allowedCategories; allowedItems };
-    switch (exists) {
+    switch (restaurantAssignments.find(func(a : RestaurantAssignment) : Bool { a.restaurantName == restaurantName })) {
       case null {
-        restaurantAssignments := Array.append(restaurantAssignments, [newEntry]);
+        restaurantAssignments := restaurantAssignments.concat([newEntry]);
       };
       case _ {
-        restaurantAssignments := Array.map(restaurantAssignments, func(a : RestaurantAssignment) : RestaurantAssignment {
+        restaurantAssignments := restaurantAssignments.map(func(a : RestaurantAssignment) : RestaurantAssignment {
           if (a.restaurantName == restaurantName) newEntry else a;
         });
       };
@@ -504,16 +522,57 @@ actor {
     adminPassword := newPwd;
   };
 
+  // ─── Concern Records (immutable after confirm, globally visible) ──────────
+
+  /// Save concern statuses for an order. Once saved, the record is permanently
+  /// stored on-chain and visible to all users. Subsequent calls for the same
+  /// (orderId, restaurantName) are silently ignored to enforce immutability.
+  public func saveConcernRecord(
+    orderId        : Nat,
+    restaurantName : Text,
+    itemStatuses   : [ConcernItemStatus],
+    confirmedBy    : Text,
+  ) : async () {
+    switch (concernRecords.find(func(r : ConcernRecord) : Bool {
+      r.orderId == orderId and r.restaurantName == restaurantName;
+    })) {
+      case (?_) { /* already confirmed — immutable, do nothing */ };
+      case null {
+        let confirmedAt : Nat = Int.abs(Time.now());
+        let newRecord : ConcernRecord = {
+          orderId;
+          restaurantName;
+          itemStatuses;
+          confirmedAt;
+          confirmedBy;
+        };
+        concernRecords := concernRecords.concat([newRecord]);
+      };
+    };
+  };
+
+  /// Retrieve the confirmed concern record for a specific order, if any.
+  public query func getConcernRecord(orderId : Nat, restaurantName : Text) : async ?ConcernRecord {
+    concernRecords.find(func(r : ConcernRecord) : Bool {
+      r.orderId == orderId and r.restaurantName == restaurantName;
+    });
+  };
+
+  /// Retrieve all stored concern records (for admin / reporting).
+  public query func getAllConcernRecords() : async [ConcernRecord] {
+    concernRecords;
+  };
+
   // ─── Legacy compatibility ─────────────────────────────────────────────────
 
   public query func getAllCategories() : async [{ name : Text }] {
-    Array.map(masterCategories, func(c : MasterCategory) : { name : Text } { { name = c.name } });
+    masterCategories.map(func(c : MasterCategory) : { name : Text } { { name = c.name } });
   };
 
   public query func getIngredientsByCategory(cat : Text) : async [{ name : Text; category : Text }] {
-    let filtered = Array.filter(rawMaterials, func(m : RawMaterial) : Bool { m.category == cat });
-    Array.map(filtered, func(m : RawMaterial) : { name : Text; category : Text } {
-      { name = m.name; category = m.category }
-    });
+    rawMaterials.filter(func(m : RawMaterial) : Bool { m.category == cat })
+      .map(func(m : RawMaterial) : { name : Text; category : Text } {
+        { name = m.name; category = m.category }
+      });
   };
 };

@@ -131,8 +131,8 @@ export async function loginUser(
         /* silent */
       }
       const result = await actor.verifyUserLogin(username, password);
-      if (result.length > 0) {
-        return { username, password: "", restaurantName: result[0] as string };
+      if (result !== null) {
+        return { username, password: "", restaurantName: result as string };
       }
       return null;
     } catch (err) {
@@ -208,7 +208,7 @@ export async function getRestaurantAssignment(
 ): Promise<RestaurantAssignment | null> {
   const actor = await getAnonActor();
   const result = await actor.getRestaurantAssignment(restaurantName);
-  return result && result.length > 0 ? (result[0] ?? null) : null;
+  return result ?? null;
 }
 
 export async function setRestaurantAssignment(

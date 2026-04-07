@@ -2,7 +2,8 @@ import type { ConcernStatus } from "../types/dailyForm";
 
 /** Statuses that render with red strikethrough */
 const STRIKETHROUGH_STATUSES: ConcernStatus[] = [
-  "rejected",
+  "notReceived",
+  "rejected", // legacy
   "spoiled",
   "expired",
   "damage",
@@ -10,9 +11,11 @@ const STRIKETHROUGH_STATUSES: ConcernStatus[] = [
 
 function getStatusLabel(status: ConcernStatus): string {
   switch (status) {
-    case "accepted":
+    case "received":
+    case "accepted": // legacy
       return "\u2705 Received";
-    case "rejected":
+    case "notReceived":
+    case "rejected": // legacy
       return "\u274C Not Received";
     case "short":
       return "\uD83D\uDFE7 Short";
@@ -33,6 +36,9 @@ export function exportConcernTableAsImage(params: {
   orderDate: string;
   categories: string[];
   totalIngredients: number;
+  isLocked?: boolean;
+  confirmedAt?: number;
+  confirmedBy?: string;
   items: {
     itemName: string;
     category: string;
@@ -48,6 +54,9 @@ export function exportConcernTableAsImage(params: {
     orderDate,
     categories,
     totalIngredients,
+    isLocked,
+    confirmedAt,
+    confirmedBy,
     items,
   } = params;
 
@@ -57,13 +66,15 @@ export function exportConcernTableAsImage(params: {
   const padding = 16;
   const canvasWidth = tableWidth + padding * 2;
 
+  // Extra height if locked/confirmed banner
+  const lockedBannerH = isLocked ? 24 : 0;
   const headerH = 96;
   const rowH = 36;
   const tableHeaderH = 34;
   const tableBodyH = items.length * rowH;
   const footerH = 28;
   const canvasHeight =
-    headerH + tableHeaderH + tableBodyH + footerH + padding * 2;
+    lockedBannerH + headerH + tableHeaderH + tableBodyH + footerH + padding * 2;
 
   const canvas = document.createElement("canvas");
   canvas.width = canvasWidth * dpr;
@@ -80,9 +91,27 @@ export function exportConcernTableAsImage(params: {
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
+  let yOffset = 0;
+
+  // Locked banner
+  if (isLocked && confirmedAt && confirmedBy) {
+    ctx.fillStyle = "#166534";
+    ctx.fillRect(0, yOffset, canvasWidth, lockedBannerH);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 10px sans-serif";
+    ctx.textAlign = "center";
+    const confirmedDateStr = new Date(confirmedAt).toLocaleString("en-IN");
+    ctx.fillText(
+      `\uD83D\uDD12 Confirmed by ${confirmedBy} on ${confirmedDateStr}`,
+      canvasWidth / 2,
+      yOffset + 16,
+    );
+    yOffset += lockedBannerH;
+  }
+
   // Header block
   ctx.fillStyle = "#111827";
-  ctx.fillRect(0, 0, canvasWidth, headerH);
+  ctx.fillRect(0, yOffset, canvasWidth, headerH);
 
   ctx.fillStyle = "#f3f4f6";
   ctx.font = "bold 13px sans-serif";
@@ -90,23 +119,33 @@ export function exportConcernTableAsImage(params: {
   ctx.fillText(
     `Order #${orderNo}  \u00b7  ${restaurantName}`,
     canvasWidth / 2,
-    22,
+    yOffset + 22,
   );
 
   ctx.font = "12px sans-serif";
   ctx.fillStyle = "#d1d5db";
-  ctx.fillText(`Order Date: ${orderDate}`, canvasWidth / 2, 38);
+  ctx.fillText(`Order Date: ${orderDate}`, canvasWidth / 2, yOffset + 38);
   ctx.font = "11px sans-serif";
-  ctx.fillText(`Categories: ${categories.join(", ")}`, canvasWidth / 2, 54);
-  ctx.fillText(`Total Ingredients: ${totalIngredients}`, canvasWidth / 2, 70);
+  ctx.fillText(
+    `Categories: ${categories.join(", ")}`,
+    canvasWidth / 2,
+    yOffset + 54,
+  );
+  ctx.fillText(
+    `Total Ingredients: ${totalIngredients}`,
+    canvasWidth / 2,
+    yOffset + 70,
+  );
 
   // Brand at bottom of header (small)
   ctx.font = "bold 8px sans-serif";
   ctx.fillStyle = "#9ca3af";
-  ctx.fillText("Shri Hoshnagi F&B Opp.", canvasWidth / 2, 84);
+  ctx.fillText("Shri Hoshnagi F&B Opp.", canvasWidth / 2, yOffset + 84);
+
+  yOffset += headerH;
 
   // Table header
-  const tableStartY = headerH + padding;
+  const tableStartY = yOffset + padding;
   const tableX = padding;
   const colHeaders = ["Item Name", "Qty", "Status"];
 
@@ -177,14 +216,14 @@ export function exportConcernTableAsImage(params: {
 
     // --- Status label ---
     const statusLabel = getStatusLabel(item.status);
-    ctx.fillStyle =
-      item.status === "accepted"
-        ? "#16a34a"
-        : item.status === "short"
-          ? "#d97706"
-          : isStrikethrough
-            ? "#dc2626"
-            : "#9ca3af";
+    const isReceived = item.status === "received" || item.status === "accepted";
+    ctx.fillStyle = isReceived
+      ? "#16a34a"
+      : isShort
+        ? "#d97706"
+        : isStrikethrough
+          ? "#dc2626"
+          : "#9ca3af";
     ctx.font = "12px sans-serif";
     ctx.fillText(statusLabel, tableX + colWidths[0] + colWidths[1] + 8, textY);
   }

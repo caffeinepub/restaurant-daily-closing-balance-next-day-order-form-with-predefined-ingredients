@@ -26,9 +26,17 @@ export interface SavedDailyRecord {
   orderNo: number;
 }
 
+/**
+ * Frontend concern status values.
+ * 'received' maps to backend ConcernStatus.received
+ * 'notReceived' maps to backend ConcernStatus.notReceived
+ * Legacy UI names 'accepted'/'rejected' are kept for backward-compat with localStorage data.
+ */
 export type ConcernStatus =
-  | "accepted"
-  | "rejected"
+  | "received"
+  | "notReceived"
+  | "accepted" // legacy alias for 'received' (localStorage compat)
+  | "rejected" // legacy alias for 'notReceived' (localStorage compat)
   | "spoiled"
   | "expired"
   | "damage"
@@ -49,5 +57,8 @@ export interface ConcernRecord {
   restaurantName: string;
   timestamp: number;
   itemStatuses: ConcernItemStatus[];
+  /** Unix ms when concern was confirmed — 0 means not yet confirmed */
   confirmedAt: number;
+  /** Username of the person who confirmed */
+  confirmedBy: string;
 }

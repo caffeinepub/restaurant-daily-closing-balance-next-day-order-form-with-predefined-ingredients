@@ -83,8 +83,7 @@ export default function DailyEntryForm({
   const navigate = useNavigate();
   const addRecord = useAddDailyRecord();
   const { data: allRecords } = useGetAllDailyRecords();
-  const { isActorReady, isActorLoading, hasActorError, retry } =
-    useActorDiagnostics();
+  const { isActorReady, hasActorError, retry } = useActorDiagnostics();
 
   const [isSaving, setIsSaving] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
@@ -714,7 +713,7 @@ export default function DailyEntryForm({
               className="w-full mt-4 gap-2 font-bold"
               style={{ background: "#111", color: "white" }}
               onClick={handleSave}
-              disabled={isSaving || isActorLoading}
+              disabled={isSaving}
               data-ocid={`${ocidPrefix}.save.primary_button`}
             >
               {isSaving ? (
